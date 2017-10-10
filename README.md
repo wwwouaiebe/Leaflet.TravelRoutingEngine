@@ -15,10 +15,10 @@ Oui, je sais, il y a des tas d'applications qui permettent de faire un itinérai
 je ne cherche pas souvent le trajet le plus court - parfois il s'agit même d'un trajet circulaire - et en général on est limité à quelques centaines 
 de kilomètres.
 
-En final , il est aussi important de pouvoir sauver ce qui a été préparé car cela ne se fait pas en quelques minutes.Il faut aussi pouvoir imprimer le résultat. Dans
+En final , il est aussi important de pouvoir enrégistrer ce qui a été préparé car cela ne se fait pas en quelques minutes.Il faut aussi pouvoir imprimer le résultat. Dans
 certaines région isolées, il n'y a pas toujours de réseau mobile ni de possibilité de recharger une batterie. Une bonne vieille copie papier est souvent précieuse.
 
 ### Quelques explications sur les termes utilisés
 
-Un trajet relie un point A à un point B sur la carte
+Un trajet relie deux points. Sur la carte, il est représenté par une ligne ininterrompue.
 
