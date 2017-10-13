@@ -57,5 +57,5 @@ https://www.example.org/TravelNotes/?MapboxProviderKey=votre_clef_accessMapbox&M
 
 Les clefs d'accès sont sauvegardées dans le _sessionStorage_ du browser. Il n'est donc pas nécessaire de les réintroduire lors de chaque rafraichissement de la page. Cependant, elles sont définitivement effacées lors de la fermeture du browser
 
-Dès que Travel & Notes détecte des clefs d'accès dans 'url, celles-ci sont enrégistrées dans le _sessionStorage_ et effacée de l'url. Elles ne sont donc plus visibles à l'écran. **Cependant, rappelez-vous qu'une personne mal intentionnée 
+Dès que Travel & Notes détecte des clefs d'accès dans l'url, celles-ci sont enrégistrées dans le _sessionStorage_ et effacée de l'url. Elles ne sont donc plus visibles à l'écran. **Cependant, rappelez-vous qu'une personne mal intentionnée 
 peut toujours les retrouver dans l'historique du navigateur.**
