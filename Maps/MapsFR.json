@@ -1,0 +1,58 @@
+[
+	{
+		"msgid" : "MapsBuilder - About Maps",
+		"msgstr" : "À propos de Maps"
+	},
+	{
+		"msgid" : "MapsBuilder - Reminder! The devil will know everything about you",
+		"msgstr" : "Souviens-toi! Le diable veut tout connaître de toi"
+	},
+	{
+		"msgid" : "MapsBuilder - OpenStreetMap contributors",
+		"msgstr" : "Contributeurs de OpenStreetMap "
+	},
+	{
+		"msgid" : "MapsBuilder - IGN",
+		"msgstr" : "| NGI &copy; IGN 2016. Toute reproduction ou adaptation sous quelque forme que ce soit est interdite. <a href='http://www.ngi.be/topomapviewer/conditions.html' target='_blank'>Conditions d&apos;utilisation</a>"
+	},
+	{
+		"msgid" : "MapsBuilder - Donate",
+		"msgstr" : "Faire un don"
+	},
+	{
+		"msgid" : "MapsBuilder - OSM Color",
+		"msgstr" : "OSM - Couleur"
+	},
+	{
+		"msgid" : "MapsBuilder - OSM Black and White",
+		"msgstr" : "OSM - Noir et Blanc"
+	},
+	{
+		"msgid" : "MapsBuilder - Esri aerial view",
+		"msgstr" : "Esri - Vue aérienne"
+	},
+	{
+		"msgid" : "MapsBuilder - Kartverket Norway",
+		"msgstr" : "Kartverket - Norvège"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest - Transport",
+		"msgstr" : "Thunderforest - Transports publics"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest OpenCycleMap",
+		"msgstr" : "Thunderforest - Itinéraires en vélo"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest - Outdoors",
+		"msgstr" : "Thunderforest - Itinéraires pédestres"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest - Landscape",
+		"msgstr" : "Thunderforest - Paysage"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN-NGI - Belgium",
+		"msgstr" : "IGN-NGI - Belgique"
+	}
+]

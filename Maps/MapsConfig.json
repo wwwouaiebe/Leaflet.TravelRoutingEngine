@@ -1,0 +1,30 @@
+{
+	"map" : {
+		"center" : {
+			"lat" : 50.50923,
+			"lng" : 5.49542
+		},
+		"zoom" : 17
+	},
+	"theDevil" : 
+	{
+		"addButton" : true,
+		"title" : "Reminder! The devil will know everything about you",
+		"text" : "&#x1f47f;"
+	},
+	"printerMark" :
+	{
+		"addOnMap" : false,
+		"top" : "723px",
+		"left" : "1051px"
+	},
+	"travelNotesAsLeafletControl" : false,
+	"contactMail" : "../blog/pages/contact",
+	"donate" : true,
+	"scaleControl" : 
+	{
+		"imperial":false,
+		"metric":true
+	},
+	"mouseControl":true
+}

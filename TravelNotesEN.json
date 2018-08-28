@@ -180,8 +180,16 @@
 		"msgstr" : "Delete this route"
 	},
 	{
+		"msgid" : "RouteEditor - Delete this waypoint",
+		"msgstr" : "Delete this waypoint"
+	},
+	{
 		"msgid" : "RouteEditor - Edit this route",
 		"msgstr" : "Edit this route"
+	},
+	{
+		"msgid" : "RouteEditor - Hide this route",
+		"msgstr" : "Hide this route"
 	},
 	{
 		"msgid" : "RouteEditor - Not possible to edit a route created with this provider",
@@ -273,7 +281,11 @@
 	},
 	{
 		"msgid" : "RoutePropertiesDialog - Chained route",
-		"msgstr" : "Chained route"
+		"msgstr" : "Chained route : "
+	},
+	{
+		"msgid" : "RoutePropertiesDialog - Linetype",
+		"msgstr" : "Linetype : "
 	},
 	{
 		"msgid" : "RoutePropertiesDialog - Route properties",
@@ -320,6 +332,14 @@
 		"msgstr" : "It's impossible to save a travel without a saving or cancelling the modifications"
 	},
 	{
+		"msgid" : "TravelEditor - Show all routes",
+		"msgstr" : "Afficher tous les trajets"
+	},
+	{
+		"msgid" : "TravelEditor - This page ask to close; data are perhaps not saved.",
+		"msgstr" : "This page ask to close; data are perhaps not saved."
+	},
+	{
 		"msgid" : "TravelEditor - Zoom to travel",
 		"msgstr" : "Zoom to travel"
 	},
@@ -338,6 +358,10 @@
 	{
 		"msgid" : "TravelEditorUI - Hide",
 		"msgstr" : "Hide"
+	},
+	{
+		"msgid" : "TravelEditorUI - Import travel",
+		"msgstr" : "Import routes and notes from another travel"
 	},
 	{
 		"msgid" : "TravelEditorUI - New route",
@@ -373,7 +397,7 @@
 	},
 	{
 		"msgid" : "Utilities - Day",
-		"msgstr" : "jours"
+		"msgstr" : "days"
 	},
 	{
 		"msgid" : "Utilities - Hour",

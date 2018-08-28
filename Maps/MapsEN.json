@@ -1,0 +1,58 @@
+[
+	{
+		"msgid" : "MapsBuilder - About Maps",
+		"msgstr" : "About Maps"
+	},
+	{
+		"msgid" : "MapsBuilder - Reminder! The devil will know everything about you",
+		"msgstr" : "Reminder! The devil will know everything about you"
+	},
+	{
+		"msgid" : "MapsBuilder - OpenStreetMap contributors",
+		"msgstr" : "OpenStreetMap contributors "
+	},
+	{
+		"msgid" : "MapsBuilder - IGN",
+		"msgstr" : "| NGI &copy; IGN 2016. Toute reproduction ou adaptation sous quelque forme que ce soit est interdite. <a href='http://www.ngi.be/topomapviewer/conditions.html' target='_blank'>Conditions d&apos;utilisation</a>"
+	},
+	{
+		"msgid" : "MapsBuilder - Donate",
+		"msgstr" : "Donate"
+	},
+	{
+		"msgid" : "MapsBuilder - OSM Color",
+		"msgstr" : "OSM - Color"
+	},
+	{
+		"msgid" : "MapsBuilder - OSM Black and White",
+		"msgstr" : "OSM - Black and White"
+	},
+	{
+		"msgid" : "MapsBuilder - Esri aerial view",
+		"msgstr" : "Esri - Aerial view"
+	},
+	{
+		"msgid" : "MapsBuilder - Kartverket Norway",
+		"msgstr" : "Kartverket - Norway"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest - Transport",
+		"msgstr" : "Thunderforest - Transport"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest OpenCycleMap",
+		"msgstr" : "Thunderforest - OpenCycleMap"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest - Outdoors",
+		"msgstr" : "Thunderforest - Outdoors"
+	},
+	{
+		"msgid" : "MapsBuilder - Thunderforest - Landscape",
+		"msgstr" : "Thunderforest - Landscape"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN-NGI - Belgium",
+		"msgstr" : "IGN-NGI - Belgium"
+	}
+]

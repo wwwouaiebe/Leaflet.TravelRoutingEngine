@@ -3,33 +3,21 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<meta name="ROBOTS" content="INDEX, NOFOLLOW" />
+		<meta name="ROBOTS" content="NOINDEX, NOFOLLOW" />
 		<title>Travel & Notes by wwwouaiebe</title>
-		<meta name="author" content="Christian Guyette" />
 		<link rel="stylesheet" href="leaflet/leaflet.css" />
+		<link rel="stylesheet" href="Maps/Maps.min.css" />
 		<link rel="stylesheet" href="TravelNotes.min.css" />
-		<link rel="stylesheet" href="index.css" media="screen"/>
 	</head>
 	<body>
-		<div id="Map">
-		</div>
+		<div id="mapsMap"></div>
 		<script src="leaflet/leaflet.js"></script>
 		<script src="TravelNotes.min.js"></script>
-		<script src="TravelNotesProviders/MapzenRouteProvider.min.js"></script>
+		<script src="TravelNotesConvert/Convert.js"></script>
 		<script src="TravelNotesProviders/MapboxRouteProvider.min.js"></script>
 		<script src="TravelNotesProviders/GraphHopperRouteProvider.min.js"></script>
 		<script src="TravelNotesProviders/OSRMRouteProvider.min.js"></script>
-		<script>
-			(function( ) 
-			{
-				'use strict';
-				var Map = L.map ( 'Map', { attributionControl : false } ).setView( [ 50.50923,5.49542 ], 17 );
-				L.control.attribution ( { position : 'bottomleft'} ).addTo ( Map );
-				L.tileLayer ( 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" title="Contributeurs de OpenStreetMap">Contributeurs de OpenStreetMap</a> | &copy; <a href="http://www.ouaie.be/" title="http://www.ouaie.be/">Christian Guyette</a>' } ).addTo ( Map );
-				var myInterface = L.travelNotes.interface ( );
-				myInterface.addControl ( Map, null, { position: "topright"} );
-				myInterface.rightContextMenu = true;
-			} ());		
-		</script>
+		<script src="TravelNotesProviders/PolylineRouteProvider.min.js"></script>
+		<script src="Maps/Maps.min.js"></script><noscript>Oh oh. Javascript is not enabled. It's impossible to display this page without javascript.</noscript>
 	</body>
 </html>
