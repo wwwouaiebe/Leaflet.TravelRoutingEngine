@@ -8,6 +8,14 @@
 		"msgstr" : "Reminder! The devil will know everything about you"
 	},
 	{
+		"msgid" : "MapsBuilder - Start geolocation",
+		"msgstr" : "Start geolocation"
+	},
+	{
+		"msgid" : "MapsBuilder - Stop geolocation",
+		"msgstr" : "Stop geolocation"
+	},
+	{
 		"msgid" : "MapsBuilder - OpenStreetMap contributors",
 		"msgstr" : "OpenStreetMap contributors "
 	},

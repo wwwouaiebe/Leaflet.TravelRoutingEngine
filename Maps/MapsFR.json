@@ -8,6 +8,14 @@
 		"msgstr" : "Souviens-toi! Le diable veut tout connaître de toi"
 	},
 	{
+		"msgid" : "MapsBuilder - Start geolocation",
+		"msgstr" : "Démarrer la localisation"
+	},
+	{
+		"msgid" : "MapsBuilder - Stop geolocation",
+		"msgstr" : "Arrêter la localisation"
+	},
+	{
 		"msgid" : "MapsBuilder - OpenStreetMap contributors",
 		"msgstr" : "Contributeurs de OpenStreetMap "
 	},

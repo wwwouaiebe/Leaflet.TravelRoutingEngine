@@ -18,6 +18,182 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 /*
+--- GeoLocator.js file -----------------------------------------------------------------------------------------------
+This file contains:
+	- the GeoLocator object
+	- the module.exports implementation
+
+Changes:
+
+-----------------------------------------------------------------------------------------------------------------------
+*/
+
+( function ( ){
+	
+	'use strict';
+
+	var GeoLocator = function ( ) {
+		
+		var _Config = {
+			color: 'red',
+			radius: 10,
+			zoomTo : true,
+			zoom : 17,
+			geoLocationOptions : {
+				enableHighAccuracy: false, 
+				maximumAge        : 0, 
+				timeout           : Infinity
+			}
+		};  // the GeoLocator config
+
+		var _IsActive = false; 
+		var _Map = null;
+		var _PositionCircle = null;
+		var _WatchId = null;
+		var _ZoomTo = false;
+
+		/*
+		--- _DrawPosition method -----------------------------------------------------------------------------------------------
+
+		This method draw the circle position on the map
+
+		------------------------------------------------------------------------------------------------------------------------
+		*/
+
+		var _DrawPosition = function ( position ) {
+			if ( ! _IsActive ) {
+				return;
+			}
+			if ( _PositionCircle ) {
+				_Map.removeLayer ( _PositionCircle );
+			}
+			_PositionCircle = L.circleMarker ( 
+				L.latLng( position.coords.latitude, position.coords.longitude ),
+				{
+					radius : _Config.radius,
+					color : _Config.color
+				}
+			).addTo ( _Map );
+			if ( _ZoomTo ) {
+				_Map.setView ( L.latLng( position.coords.latitude, position.coords.longitude ), _Config.zoom );
+				_ZoomTo = false;
+			}
+		};
+		
+		/* --- End of _DrawPosition method --- */
+
+		/*
+		--- _Stop method ------------------------------------------------------------------------------------------------------
+
+		This method stop the geoloation
+
+		------------------------------------------------------------------------------------------------------------------------
+		*/
+		
+		var _Stop = function ( ) {
+			_IsActive = false;
+			if ( _PositionCircle ) {
+				_Map.removeLayer ( _PositionCircle );
+			}
+			_PositionCircle = null;
+			if ( _WatchId ) {
+				navigator.geolocation.clearWatch ( _WatchId );
+			}
+		};
+		
+		/* --- End of _Stop method --- */
+
+		/*
+		--- _Start method ------------------------------------------------------------------------------------------------------
+
+		This method start the geoloation
+
+		------------------------------------------------------------------------------------------------------------------------
+		*/
+
+		var _Start = function ( ) {
+			_IsActive = true;
+			_ZoomTo = _Config.zoomTo;
+			navigator.geolocation.getCurrentPosition ( _DrawPosition , _Stop, _Config.geoLocationOptions);
+			_WatchId = navigator.geolocation.watchPosition ( _DrawPosition, _Stop );
+		};
+		
+		/* --- End of _Stop method --- */
+
+		/*
+		--- GeoLocator object -----------------------------------------------------------------------------------------
+
+		---------------------------------------------------------------------------------------------------------------
+		*/
+		
+		return {
+
+			getStatus : function ( ) {
+				return _IsActive;
+			},
+
+			init : function ( map, config ) {
+				_Map = map;
+				if ( config ) {
+					_Config.color = config.color || 'red';
+					_Config.radius = config.radius || 10;
+					_Config.zoomTo = config.zoomTo || true;
+					_Config.zoom = config.zoom || 17;
+					if ( config.geoLocationOptions ) {
+						_Config.geoLocationOptions.enableHighAccuracy = config.geoLocationOptions.enableHighAccuracy || false;
+						_Config.geoLocationOptions.maximumAge = config.geoLocationOptions.maximumAge || 0;
+						_Config.geoLocationOptions.timeout = config.geoLocationOptions.timeout || Infinity;
+					}
+				}
+			},
+
+			switch : function ( ) {
+				if ( ( 'https:' !== window.location.protocol.toLowerCase ( ) ) || ( ! "geolocation" in navigator ) ) {
+					return;
+				}
+				
+				if ( _IsActive ){
+					_Stop ( );
+				}
+				else {
+					_Start ( );
+				}
+			}
+		};
+	};
+	/*
+	--- Exports -------------------------------------------------------------------------------------------------------
+	*/
+
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = GeoLocator;
+	}
+
+}());
+
+/*
+--- End of GeoLocator.js file ----------------------------------------------------------------------------------------
+*/
+},{}],2:[function(require,module,exports){
+/*
+Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the 
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/*
 --- HTMLElementsFactory.js file ---------------------------------------------------------------------------------------
 This file contains:
 	- the HTMLElementsFactory object
@@ -93,7 +269,7 @@ Tests ...
 --- End of HTMLElementsFactory.js file --------------------------------------------------------------------------------
 */	
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
 
@@ -125,6 +301,7 @@ Changes:
 ( function ( ){
 	
 	'use strict';
+
 
 	var MapBuilder = function ( ) {
 
@@ -161,10 +338,25 @@ Changes:
 				imperial:false,
 				metric:true
 			},
-			mouseControl: true
+			mouseControl: true,
+			geoLocation:
+			{
+				color: 'red',
+				radius: 10,
+				zoomTo : true,
+				zoom : 17,
+				geoLocationOptions : {
+					enableHighAccuracy: false, 
+					maximumAge        : 0, 
+					timeout           : Infinity
+				}
+			},
+			toolbarAlwaysVisible:false
 		};
 		
 		var _Map = null; // the map
+		
+		var _GeoLocator = require ( './GeoLocator' ) ( );
 
 		var _TravelNotesInterface = null; // the TravelNotes apps
 		
@@ -293,7 +485,7 @@ Changes:
 			
 			var providerKeys = {};
 			_Layers [ '0' ] = {
-				layer : L.tileLayer ( 'http://{s}.tile.osm.org/{z}/{x}/{y}.png', { layerId : '0'} ),
+				layer : L.tileLayer ( 'https://{s}.tile.osm.org/{z}/{x}/{y}.png', { layerId : '0'} ),
 				name : _Translator.getText ( 'MapsBuilder - OSM Color') ,
 				toolbarText : 'OSM',
 				attribution : _Attributions.osm
@@ -305,14 +497,14 @@ Changes:
 				attribution : _Attributions.osm
 			};
 			_Layers [ '5' ] = {
-				layer : L.tileLayer ( 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { layerId : '5' } ),
+				layer : L.tileLayer ( 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { layerId : '5' } ),
 				name : _Translator.getText ( 'MapsBuilder - Esri aerial view' ),
 				toolbarText : 'ESRI',
 				attribution : _Attributions.esri
 			};
 			_Layers [ '6' ] = {
 				layer : L.tileLayer ( 
-					'http://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=matrikkel_bakgrunn&zoom={z}&x={x}&y={y}', 
+					'https://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=matrikkel_bakgrunn&zoom={z}&x={x}&y={y}', 
 					{ 
 						layerId : '6',
 						bounds : L.latLngBounds ( L.latLng ( 56.84, 1.40 ), L.latLng ( 72.10, 35.15 ) )
@@ -326,25 +518,25 @@ Changes:
 				if ( 0 < _TravelNotesInterface.getProviderKey ( 'thunderforest' ).length ) {
 					providerKeys.thunderforest = _TravelNotesInterface.getProviderKey ( 'thunderforest' );
 					_Layers [ '2' ] = {
-						layer : L.tileLayer ( 'http://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '2'} ),
+						layer : L.tileLayer ( 'https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '2'} ),
 						name : _Translator.getText ( 'MapsBuilder - Thunderforest - Transport' ),
 						toolbarText : '&#x1f686;',
 						attribution : _Attributions.osm + _Attributions.thunderforest
 					};		
 					_Layers [ '3' ] = {
-						layer : L.tileLayer ( 'http://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '3' } ),
+						layer : L.tileLayer ( 'https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '3' } ),
 						name : _Translator.getText ( 'MapsBuilder - Thunderforest OpenCycleMap' ),
 						toolbarText : '&#x1f6b2;',
 						attribution : _Attributions.osm + _Attributions.thunderforest
 					};
 					_Layers [ '4' ] = {
-						layer : L.tileLayer ( 'http://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '4'} ),
+						layer : L.tileLayer ( 'https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '4'} ),
 						name : _Translator.getText ( 'MapsBuilder - Thunderforest - Outdoors' ),
 						toolbarText : '&#x1f6b6;',
 						attribution : _Attributions.osm + _Attributions.thunderforest
 					};
 					_Layers [ '12' ] = {
-						layer : L.tileLayer ( 'http://{s}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '12' } ),
+						layer : L.tileLayer ( 'https://{s}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '12' } ),
 						toolbarText : '&#x26f0;',
 						name : _Translator.getText ( 'MapsBuilder - Thunderforest - Landscape' ),
 						attribution : _Attributions.osm + _Attributions.thunderforest
@@ -353,7 +545,7 @@ Changes:
 				if ( 0 < _TravelNotesInterface.getProviderKey ( 'ign' ).length ) {
 					_Layers [ '7' ] = {
 						layer : L.tileLayer ( 
-							'http://www.ngi.be/cartoweb/1.0.0/topo/default/3857/{z}/{y}/{x}.png',
+							'https://www.ngi.be/cartoweb/1.0.0/topo/default/3857/{z}/{y}/{x}.png',
 							{ 
 								layerId : '7',
 								myMinZoom : 7,
@@ -464,6 +656,26 @@ Changes:
 						mapsToolbarButton.addEventListener (
 							'click',
 							listener,
+							true
+						);
+					}
+
+					if ( ( 'https:' === window.location.protocol.toLowerCase ( ) ) && ( "geolocation" in navigator ) ) {
+						var mapsGeolocationButton = _HtmlElementsFactory.create ( 
+							'div',
+							{
+								className : "mapsToolbarButton " + ( _GeoLocator.getStatus ( ) ? "mapsToolbarStopGeolocationButton" : "mapsToolbarStartGeolocationButton" ),
+								innerHTML : "&#x1f310;",
+								id: 'mapsToolbarGeolocationButton',
+								title : _Translator.getText ( _GeoLocator.getStatus ( ) ? "MapsBuilder - Stop geolocation" : "MapsBuilder - Start geolocation" )
+							},
+							mapsToolbarButtons
+						);
+						mapsGeolocationButton.addEventListener (
+							'click',
+							function ( event ) {
+								_GeoLocator.switch ( );
+							},
 							true
 						);
 					}
@@ -672,12 +884,14 @@ Changes:
 			_Map.on ( 
 				'travelnotesfileloaded',
 				function ( event ) {
-					_MouseControl.name = event.name || '';
-					if ( event.readOnly ) {
+					_MouseControl.name = event.name || ''; // file name
+					if ( event.readOnly && ! _Config.toolbarAlwaysVisible ) {
 						if ( document.getElementById ( "mapsToolbar" ) ) {
 							document.getElementById ( "mapsToolbar" ).style.visibility = "hidden";
 							document.getElementById ( "mapsToolbar" ).style.width = "0";
 						}
+					}
+					if ( event.readOnly ) {
 						if ( document.getElementById ( "mapsMouseControl" ) ) {
 							document.getElementById ( "mapsMouseControl" ).style.visibility = "hidden";
 						}
@@ -737,6 +951,8 @@ Changes:
 				
 				_BuildEvents ( );
 				
+				_GeoLocator.init ( _Map, _Config.geoLocation );
+				
 				_SetLayer ( '0' );				
 			}
 		};
@@ -755,7 +971,7 @@ Changes:
 /*
 --- End of MapBuilder.js file ----------------------------------------------------------------------------------------
 */
-},{"./HTMLElementsFactory":1,"./Translator":5}],3:[function(require,module,exports){
+},{"./GeoLocator":1,"./HTMLElementsFactory":2,"./Translator":6}],4:[function(require,module,exports){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
 
@@ -799,8 +1015,6 @@ Changes:
 		}
 		return langage.toUpperCase ( );
 	};
-
-console.log ( window.location.href.substr (0, window.location.href.lastIndexOf( '/') + 1 ) + 'Maps/Maps' + getLanguage ( ) +'.json' );
 	
 	var mapBuilder = require ( './MapBuilder' ) ( );
 	
@@ -831,7 +1045,7 @@ console.log ( window.location.href.substr (0, window.location.href.lastIndexOf( 
 /*
 --- End of Maps.js file ----------------------------------------------------------------------------------------
 */
-},{"./MapBuilder":2,"./TaskLoader":4}],4:[function(require,module,exports){
+},{"./MapBuilder":3,"./TaskLoader":5}],5:[function(require,module,exports){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
 
@@ -855,6 +1069,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 This file contains:
 	- the TaskLoader object
 	- the module.exports implementation
+Notice:
+	why doing simple when you can do it complex?	
 Changes:
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -868,21 +1084,28 @@ Changes:
 		
 		var _JsonFileLoader = function ( ) {
 			return {
-				start : function ( context, nextTaskOnOk, fileUrl, taskNumber )
+				start : function ( context, functionWhenFinish, fileUrl, taskNumber )
 				{
 					var xmlHttpRequest = new XMLHttpRequest ( );
+					xmlHttpRequest.timeout = 5000;
+					xmlHttpRequest.ontimeout = function ( event ) {
+						functionWhenFinish.call (  context,  null, taskNumber, 3 );
+					};
 					xmlHttpRequest.onreadystatechange = function ( ) {
-						if ( xmlHttpRequest.readyState == 4 ) {
+						if ( xmlHttpRequest.readyState === 4 ) {
 							var response = null;
-							if ( xmlHttpRequest.status == 200 ) {
+							if ( xmlHttpRequest.status === 200 ) {
 								try {
 									response = JSON.parse ( xmlHttpRequest.responseText );
-									nextTaskOnOk.call (  context,  response, taskNumber );
+									functionWhenFinish.call (  context,  response, taskNumber, 2 );
 								}
 								catch ( e )
 								{
+									functionWhenFinish.call (  context,  null, taskNumber, 3 );
 								}
-								
+							}
+							else {
+								functionWhenFinish.call (  context,  null, taskNumber, 3 );
 							}
 						}
 					};
@@ -894,7 +1117,6 @@ Changes:
 		};
 		
 		var _TaskPointer = 0;
-		var _TaskCounter = 0;
 		var _Tasks = [];
 
 		/*
@@ -904,62 +1126,65 @@ Changes:
 		*/
 
 		return {
-			taskRunner : function ( ) {
-				var loopEndFlag = false;
-				while ( ! loopEndFlag ) {
-					switch ( _Tasks [ _TaskCounter ].task )
-					{
-						case 'loadJsonFile':
-							_JsonFileLoader ( ).start ( this, this.endTask, _Tasks [ _TaskCounter ].url, _TaskCounter );
-							_Tasks [ _TaskCounter].status = 1;
-							_TaskCounter ++;
-							loopEndFlag = _TaskCounter >= _Tasks.length;
-							break;
-						case 'wait':
-							loopEndFlag = true;
-							// calling endTask to avoid an infinite break if previous tasks are already finished
-							this.endTask ( "", _TaskCounter );
-							break;
-						case 'run' :
-							var params = (_Tasks [ _TaskCounter ].params ? _Tasks [ _TaskCounter ].params : [ ] );
-							if ( _Tasks [ _TaskCounter ].responses ) {
-								for (var responsesCounter = 0; responsesCounter < _Tasks [ _TaskCounter ].responses.length; responsesCounter ++ ) {
-									params.push ( _Tasks [ _Tasks [ _TaskCounter ].responses [ responsesCounter ]].response );
-								}
-							}
-							_Tasks [ _TaskCounter ].func.call ( _Tasks [ _TaskCounter ].context, params );
-							_TaskCounter ++;
-							loopEndFlag = _TaskCounter >= _Tasks.length;
-							break;
-						default:
-							_TaskCounter ++;
-							loopEndFlag = _TaskCounter >= _Tasks.length;
-							break;
-					}
-				}
-			},
 			start : function ( tasks ) {
 				_Tasks = tasks;
-				var _TaskCounter = 0;
-				for ( _TaskCounter = 0; _TaskCounter < _Tasks.length; _TaskCounter ++ ) {
-					_Tasks [ _TaskCounter ].status = 0;
+				var _TaskPointer = 0;
+				for ( _TaskPointer = 0; _TaskPointer < _Tasks.length; _TaskPointer ++ ) {
+					_Tasks [ _TaskPointer ].status = 0;
 				}
-				_TaskCounter = 0;
+				_TaskPointer = -1;
 				this.taskRunner ( );
 			},
-			endTask : function ( response, taskNumber ) {
+			taskRunner : function ( ) {
+				// status = 0 not started; status = 1 started; status = 2 finish ok; status = 3 finish not ok
+				var wait = false;
+				while (  ( ! wait ) && _TaskPointer < _Tasks.length   ) {
+					_Tasks [ _TaskPointer].status = 1;
+					switch ( _Tasks [ _TaskPointer ].task )
+					{
+						case 'loadJsonFile':
+							_JsonFileLoader ( ).start ( this, this.endTask, _Tasks [ _TaskPointer ].url, _TaskPointer );
+							_TaskPointer ++;
+							break;
+						case 'wait':
+							// calling endTask to avoid an infinite break if previous tasks are already finished
+							this.endTask ( "", _TaskPointer );
+							wait = true;
+							break;
+						case 'run' :
+							var params = (_Tasks [ _TaskPointer ].params ? _Tasks [ _TaskPointer ].params : [ ] );
+							if ( _Tasks [ _TaskPointer ].responses ) {
+								for (var responsesCounter = 0; responsesCounter < _Tasks [ _TaskPointer ].responses.length; responsesCounter ++ ) {
+									params.push ( _Tasks [ _Tasks [ _TaskPointer ].responses [ responsesCounter ]].response );
+								}
+							}
+							_Tasks [ _TaskPointer ].func.call ( _Tasks [ _TaskPointer ].context, params );
+							_Tasks [ _TaskPointer].status = 2;
+							_TaskPointer ++;
+							break;
+						default:
+							_TaskPointer ++;
+							break;
+					}
+				}
+			},
+			endTask : function ( response, taskNumber, status ) {
 				if ( 'loadJsonFile' === _Tasks [ taskNumber ].task ) {
 					_Tasks [ taskNumber ].response = response;
-				}
-				_Tasks [ taskNumber].status = 2;
-				if ( 'wait' ===  _Tasks [ _TaskCounter ].task ){ 
-					var status = true;
-					for (var statusCounter = 0; statusCounter < _TaskCounter; statusCounter ++ )
-					{
-						status &= _Tasks [ statusCounter ].status === 2;
+					_Tasks [ taskNumber].status = status;
+					if ( 3 === status ) {
+						console.log ( 'File ' + _Tasks [ taskNumber ].url + ' not loaded.' );
 					}
-					if ( status ) {
-						_TaskCounter ++;
+				}
+				if ( 'wait' === _Tasks [ _TaskPointer ].task ) {
+					var statusOK = true;
+					for (var statusCounter = 0; statusCounter < _TaskPointer; statusCounter ++ )
+					{
+						statusOK &= ( _Tasks [ statusCounter ].status >= 2 );
+					}
+					if ( statusOK ) {
+						_Tasks [ _TaskPointer ].status = 2;
+						_TaskPointer ++;
 						this.taskRunner ( );
 					}
 				}
@@ -979,7 +1204,7 @@ Changes:
 /*
 --- End of TaskLoader.js file ----------------------------------------------------------------------------------------
 */
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 (function (global){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
@@ -1039,7 +1264,7 @@ Tests ...
 					);
 				}
 				
-				return ! translation ? msgid : translation;
+				return translation ? translation : msgid;
 			}
 		};
 	};
@@ -1059,4 +1284,4 @@ Tests ...
 */	
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[3]);
+},{}]},{},[4]);

@@ -12,10 +12,17 @@
 
 var polyline = {};
 
-function encode(coordinate, factor) {
-    coordinate = Math.round(coordinate * factor);
+function py2_round(value) {
+    // Google's polyline algorithm uses the same rounding strategy as Python 2, which is different from JS for negative values
+    return Math.floor(Math.abs(value) + 0.5) * (value >= 0 ? 1 : -1);
+}
+
+function encode(current, previous, factor) {
+    current = py2_round(current * factor);
+    previous = py2_round(previous * factor);
+    var coordinate = current - previous;
     coordinate <<= 1;
-    if (coordinate < 0) {
+    if (current - previous < 0) {
         coordinate = ~coordinate;
     }
     var output = '';
@@ -98,12 +105,12 @@ polyline.encode = function(coordinates, precision) {
     if (!coordinates.length) { return ''; }
 
     var factor = Math.pow(10, precision || 5),
-        output = encode(coordinates[0][0], factor) + encode(coordinates[0][1], factor);
+        output = encode(coordinates[0][0], 0, factor) + encode(coordinates[0][1], 0, factor);
 
     for (var i = 1; i < coordinates.length; i++) {
         var a = coordinates[i], b = coordinates[i - 1];
-        output += encode(a[0] - b[0], factor);
-        output += encode(a[1] - b[1], factor);
+        output += encode(a[0], b[0], factor);
+        output += encode(a[1], b[1], factor);
     }
 
     return output;
@@ -194,6 +201,64 @@ Tests ...
 
 	var DataManager = function ( ) {
 
+			/*
+			--- _copyObjectTo method -------------------------------------------------------------------------------------------
+
+			This method:
+				- search recursively all dest properties
+				- foreach found property, search the same property in source
+				- copy the property value from source to dest if found
+				- search recursively all sources properties
+				- foreach found property search the same property in dest
+				-copy the property value from source to dest
+				
+				So: 
+					- if a property is missing in the user config, the property is selected from the default config
+					- if a property is in the user config but missing in the default config, the property is also added (and reminder
+					  that the user can have more dashChoices than the default config )
+					- if a property is changed in the user config, the property is adapted
+			
+			-----------------------------------------------------------------------------------------------------------
+			*/
+
+			var _copyObjectTo = function ( source, dest ) {
+			if ( ( 'object' !== typeof source ) || ( 'object' !== typeof dest ) ) {
+				return;
+			}
+			try {
+			
+				var property;
+				for ( property in dest ) {
+					if ( 'object' === typeof dest [ property ] ) {
+						_copyObjectTo ( source [ property ], dest [ property ] );
+					}
+					else {
+						dest [ property ] = source [ property ] || dest [ property ];
+					}
+				}
+
+				for ( property in source ) {
+					if ( 'object' === typeof source [ property ] ) {
+						if ( Object.prototype.toString.call ( source [ property ] ) == '[object Array]' ) {
+							dest [ property ] = dest [ property ] || [];
+						}
+						else {
+							dest [ property ] = dest [ property ] || {};
+						}
+						_copyObjectTo ( source [ property ], dest [ property ] );
+					}
+					else {
+						dest [ property ] = source [ property ];
+					}
+				}
+			}
+			catch ( e ) {
+				console.log ( 'Not possible to load TravelNotesConfig.json' );
+			}
+			
+			return;
+		};
+		
 		return {
 
 			/*
@@ -275,7 +340,7 @@ Tests ...
 					},
 					haveBeforeUnloadWarning : true
 				};
-				global.version = '1.1.0';
+				global.version = '1.2.0';
 				global.map = map;
 				global.travelObjId = 0;
 				global.editedRoute = require ( '../data/Route' ) ( );
@@ -311,7 +376,7 @@ Tests ...
 			set travel ( Travel ) { global.travel = Travel; },
 
 			get config ( ) { return global.config; },
-			set config ( Config ) { global.config = Config; },
+			set config ( Config ) { _copyObjectTo ( Config, global.config ); },
 
 			get mapObjects ( ) { return global.mapObjects; },
 
@@ -925,6 +990,7 @@ Tests ...
 	var _RightContextMenu = false;
 	
 	var _Langage = '';
+	var _LoadedTravel = null;
 	var _DataManager = require ( './data/DataManager' ) ( );
 	var _Utilities = require ( './util/Utilities' ) ( );
 
@@ -952,6 +1018,14 @@ Tests ...
 			var urlSearch = decodeURI ( window.location.search ).substr ( 1 ).split ( '&' );
 			var newUrlSearch = '?' ;
 			for ( var urlCounter = 0; urlCounter < urlSearch.length; urlCounter ++ ) {
+				
+				if ( 'fil=' === urlSearch [ urlCounter ].substr ( 0, 4 ).toLowerCase ( ) ) {
+					_LoadedTravel = decodeURIComponent ( escape( atob ( urlSearch [ urlCounter ].substr ( 4 ) ) ) );
+					newUrlSearch += ( newUrlSearch === '?' ) ? '' :  '&';
+					newUrlSearch += urlSearch [ urlCounter ];
+					continue;
+				}
+				
 				var param = urlSearch [ urlCounter ].split ( '=' );
 				if ( ( 2 === param.length ) && ( -1 !== param [ 0 ].indexOf ( 'ProviderKey' ) ) ) {
 					if ( _Utilities.storageAvailable ( 'sessionStorage' ) ) {
@@ -1075,7 +1149,9 @@ Tests ...
 											}
 										}
 										require ( './UI/TravelEditorUI' ) ( ).setRoutesList ( _DataManager.travel.routes );
-										require ( './core/TravelEditor' ) ( ).openServerTravel ( );
+										if ( _LoadedTravel ) {
+											require ( './core/TravelEditor' ) ( ).openServerTravel ( _LoadedTravel );
+										}
 										require ( './core/TravelEditor' ) ( ).changeTravelHTML ( true );
 										if ( _DataManager.config.travelEditor.startupRouteEdition ) {
 											require ( './core/TravelEditor' ) ( ).editRoute ( _DataManager.travel.routes.first.objId );
@@ -4688,7 +4764,7 @@ Tests ...
 					);
 				}
 				
-				return ! translation ? msgid : translation;
+				return translation ? translation : msgid;
 			}
 		};
 	};
@@ -7905,7 +7981,7 @@ Tests ...
 			// decompressing the itineraryPoints
 			compressedTravel.routes.forEach ( 
 				function ( route ) {
-					route.itinerary.itineraryPoints.latLngs = require ( 'polyline' ).decode ( route.itinerary.itineraryPoints.latLngs, 6 );
+					route.itinerary.itineraryPoints.latLngs = require ( '@mapbox/polyline' ).decode ( route.itinerary.itineraryPoints.latLngs, 6 );
 					var decompressedItineraryPoints = [];
 					var latLngsCounter = 0;
 					route.itinerary.itineraryPoints.latLngs.forEach (
@@ -8186,7 +8262,7 @@ Tests ...
 									compressedItineraryPoints.objIds.push ( itineraryPoint.objId );
 								}
 							);
-							compressedItineraryPoints.latLngs = require ( 'polyline' ).encode ( compressedItineraryPoints.latLngs, 6 );
+							compressedItineraryPoints.latLngs = require ( '@mapbox/polyline' ).encode ( compressedItineraryPoints.latLngs, 6 );
 							route.itinerary.itineraryPoints = compressedItineraryPoints;
 						}
 					);
@@ -8242,23 +8318,18 @@ Tests ...
 			-----------------------------------------------------------------------------------------------------------
 			*/
 
-			openServerTravel : function ( ) {
-				var urlSearch = decodeURI ( window.location.search );
-				var serverUrl = null;
-				if ( 'fil=' === urlSearch.substr ( 1, 4 ) ) {
-					serverUrl = atob ( urlSearch.substr ( 5 ) );
-					var xmlHttpRequest = new XMLHttpRequest ( );
-					xmlHttpRequest.onreadystatechange = function ( event ) {
-						if ( this.readyState === XMLHttpRequest.DONE ) {
-							if ( this.status === 200 ) {
-								_LoadFile ( this.responseText,'', true );
-							} 
-						}
-					};
-					xmlHttpRequest.open ( 'GET', serverUrl, true	) ;
-					xmlHttpRequest.overrideMimeType ( 'application/json' );
-					xmlHttpRequest.send ( null );
-				}
+			openServerTravel : function ( serverUrl ) {
+				var xmlHttpRequest = new XMLHttpRequest ( );
+				xmlHttpRequest.onreadystatechange = function ( event ) {
+					if ( this.readyState === XMLHttpRequest.DONE ) {
+						if ( this.status === 200 ) {
+							_LoadFile ( this.responseText,'', true );
+						} 
+					}
+				};
+				xmlHttpRequest.open ( 'GET', serverUrl, true	) ;
+				xmlHttpRequest.overrideMimeType ( 'application/json' );
+				xmlHttpRequest.send ( null );
 			},
 
 			/*
@@ -8360,7 +8431,7 @@ Tests ...
 /*
 --- End of TravelEditor.js file ---------------------------------------------------------------------------------------
 */
-},{"../Data/DataManager":2,"../Data/Route":4,"../Data/Travel":5,"../UI/AboutDialog":8,"../UI/HTMLViewsFactory":14,"../UI/RouteEditorUI":17,"../UI/Translator":20,"../UI/TravelEditorUI":21,"../core/ItineraryEditor":25,"../core/MapEditor":26,"../core/RouteEditor":28,"../util/Utilities":43,"./ErrorEditor":23,"./MapEditor":26,"./RouteEditor":28,"polyline":1}],31:[function(require,module,exports){
+},{"../Data/DataManager":2,"../Data/Route":4,"../Data/Travel":5,"../UI/AboutDialog":8,"../UI/HTMLViewsFactory":14,"../UI/RouteEditorUI":17,"../UI/Translator":20,"../UI/TravelEditorUI":21,"../core/ItineraryEditor":25,"../core/MapEditor":26,"../core/RouteEditor":28,"../util/Utilities":43,"./ErrorEditor":23,"./MapEditor":26,"./RouteEditor":28,"@mapbox/polyline":1}],31:[function(require,module,exports){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
 This  program is free software;
@@ -9318,7 +9389,11 @@ Tests ...
 						object.objType.version = '1.1.0';
 						//end upgrade from 1.0.0 to 1.1.0
 					}
-					else {
+					if ( '1.1.0' === object.objType.version ) {
+						object.objType.version = '1.2.0';
+						//end upgrade from 1.1.0 to 1.2.0
+					}
+					if ( _Version !== object.objType.version ) {
 						throw 'invalid version for ' + _Name;
 					}
 				}

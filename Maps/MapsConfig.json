@@ -1,30 +1,44 @@
 {
-	"map" : {
-		"center" : {
-			"lat" : 50.50923,
-			"lng" : 5.49542
-		},
-		"zoom" : 17
-	},
-	"theDevil" : 
+	"map" :
 	{
-		"addButton" : false,
-		"title" : "Reminder! The devil will know everything about you",
-		"text" : "&#x1f47f;"
+		"center": {
+			"lat": 50.50923,
+			"lng": 5.49542
+		},
+		"zoom": 17
+	},
+	"theDevil": 
+	{
+		"addButton": true,
+		"title": "Reminder! The devil will know everything about you",
+		"text": "&#x1f47f;"
 	},
 	"printerMark" :
 	{
-		"addOnMap" : false,
-		"top" : "723px",
-		"left" : "1051px"
+		"addOnMap": false,
+		"top": "723px",
+		"left": "1051px"
 	},
-	"travelNotesAsLeafletControl" : false,
-	"contactMail" : "http://www.ouaie.be/blog/pages/contact",
-	"donate" : true,
-	"scaleControl" : 
+	"travelNotesAsLeafletControl": false,
+	"contactMail" : "../blog/pages/contact",
+	"donate": true,
+	"scaleControl": 
 	{
 		"imperial":false,
 		"metric":true
 	},
-	"mouseControl":true
+	"mouseControl":true,
+	"geoLocation":
+	{
+		"color": "red",
+		"radius": 30,
+		"zoomTo": true,
+		"zoom": 15,
+		"geoLocationOptions": {
+			"enableHighAccuracy": true, 
+			"maximumAge": 5000, 
+			"timeout": "60000"
+		}
+	},
+	"toolbarAlwaysVisible":false
 }
