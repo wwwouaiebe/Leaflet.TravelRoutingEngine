@@ -1,9 +1,5 @@
 # Travel & Notes with Leaflet
 
-[Guide pour les utilisateurs - fr ](https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/master/TravelNotesGuides/GuideUtilisateurFR.md)
+The documentation is [there](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages/TravelNotesGuides).
 
-[Guide d'installation - fr ](https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/master/TravelNotesGuides/GuideInstallationFR.md)
-
-[Demo - fr ](https://wwwouaiebe.github.io/leaflet.TravelNotes/?)
-
-[Demo - en ](https://wwwouaiebe.github.io/leaflet.TravelNotes/?lng=en)
+La documentation est [ici](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages/TravelNotesGuides)
