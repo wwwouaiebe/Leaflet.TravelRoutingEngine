@@ -40,5 +40,6 @@
 			"timeout": "60000"
 		}
 	},
+	"toolbarTimeOut":1500,
 	"toolbarAlwaysVisible":false
 }

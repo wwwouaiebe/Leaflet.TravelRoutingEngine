@@ -302,11 +302,11 @@ Changes:
 	
 	'use strict';
 
+	var _TimerId = null;
 
 	var MapBuilder = function ( ) {
 
 		var _Translator = require ( './Translator' ) ( );
-
 		
 		// default config values. Normally overloaded  at startup with MapsConfig.json
 		var _Config = 
@@ -619,6 +619,12 @@ Changes:
 			mapsToolbar.addEventListener (
 				'mouseenter',
 				function ( ) {
+					if ( _TimerId ) {
+						clearTimeout ( _TimerId );
+						_TimerId = null;
+						return;
+					}
+					
 					var mapsToolbarButtons = _HtmlElementsFactory.create ( 
 						'div',
 						{
@@ -705,7 +711,7 @@ Changes:
 							{
 								id : 'mapsToolbarTravelNotesHelpButton',
 								className : 'mapsToolbarButton',
-								innerHTML : '<a title="leaflet.TravelNotes help" href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages" target="_blank">?</a>'
+								innerHTML : '<a title="leaflet.TravelNotes help" href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages/TravelNotesGuides" target="_blank">?</a>'
 							},
 							mapsToolbarButtons
 						);
@@ -729,11 +735,17 @@ Changes:
 				},
 				false
 			);
-			
+
 			mapsToolbar.addEventListener (
 				'mouseleave',
 				function ( ) {
-					document.getElementById ( 'mapsToolbar' ).removeChild ( document.getElementById ( 'mapsToolbarButtons' ) );
+					_TimerId = setTimeout (
+						function ( ) {
+							document.getElementById ( 'mapsToolbar' ).removeChild ( document.getElementById ( 'mapsToolbarButtons' ) );
+							_TimerId = null;
+						},
+						_Config.toolbarTimeOut || 1500
+					);
 				},
 				false
 			);
@@ -971,7 +983,7 @@ Changes:
 /*
 --- End of MapBuilder.js file ----------------------------------------------------------------------------------------
 */
-},{"./GeoLocator":1,"./HTMLElementsFactory":2,"./Translator":6}],4:[function(require,module,exports){
+},{"./GeoLocator":1,"./HTMLElementsFactory":2,"./Translator":5}],4:[function(require,module,exports){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
 
@@ -991,7 +1003,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 /*
---- Maps.js file -----------------------------------------------------------------------------------------------
+--- Maps.js file ------------------------------------------------------------------------------------------------------
 This file contains:
 	- the starting code for Maps
 Changes:
@@ -1003,208 +1015,99 @@ Changes:
 
 	'use strict';
 
+	var _XMLHttpRequestUrl = '';
+
+	/*
+	--- getLanguage function ------------------------------------------------------------------------------------------
+
+	This function ...
+
+	-------------------------------------------------------------------------------------------------------------------
+	*/
+
 	var getLanguage = function ( ) {
-		var langage ='fr';
-		var urlSearch = decodeURI ( window.location.search ).substr ( 1 ).split ( '&' );
-		var newUrlSearch = '?' ;
-		for ( var urlCounter = 0; urlCounter < urlSearch.length; urlCounter ++ ) {
-			var param = urlSearch [ urlCounter ].split ( '=' );
-			if ( ( 2 === param.length ) && 'lng' === param [ 0 ].toLowerCase ( ) ) {
-				langage = param [ 1 ].toLowerCase ( );
+		var language = 'FR';
+		decodeURI ( window.location.search ).substr ( 1 ).split ( '&' ).forEach ( 
+			function ( urlSearchSubString ) {
+				var param = urlSearchSubString.split ( '=' );
+				if ( ( 2 === param.length ) && 'lng' === param [ 0 ].toLowerCase ( ) ) {
+					language = param [ 1 ].toUpperCase ( );
+				}
 			}
-		}
-		return langage.toUpperCase ( );
+		);
+
+		return language;
 	};
 	
-	var mapBuilder = require ( './MapBuilder' ) ( );
+	/*
+	--- End of getLanguage function ---
+	*/
+
+	/*
+	--- _StartXMLHttpRequest function ---------------------------------------------------------------------------------
+
+	This function ...
+
+	-------------------------------------------------------------------------------------------------------------------
+	*/
 	
-	require ( './TaskLoader' ) ( ).start ( 
-		[
-			{
-				task: 'loadJsonFile',
-				url : window.location.href.substr (0, window.location.href.lastIndexOf( '/') + 1 ) + 'Maps/MapsConfig.json',
-			},
-			{
-				task: 'loadJsonFile',
-				url : window.location.href.substr (0, window.location.href.lastIndexOf( '/') + 1 ) + 'Maps/Maps' + getLanguage ( ) +'.json',
-			},
-			{	
-				task: 'wait'
-			},
-			{	
-				task: 'run',
-				func : mapBuilder.build,
-				context : mapBuilder,
-				responses : [ 0, 1 ]
+	var _StartXMLHttpRequest = function ( returnOnOk, returnOnError ) {
+		
+		var xmlHttpRequest = new XMLHttpRequest ( );
+		xmlHttpRequest.timeout = 20000;
+		
+		xmlHttpRequest.ontimeout = function ( event ) {
+			returnOnError ( 'XMLHttpRequest TimeOut. File : ' + xmlHttpRequest.responseURL );
+		};
+		
+		xmlHttpRequest.onreadystatechange = function ( ) {
+			if ( xmlHttpRequest.readyState === 4 ) {
+				if ( xmlHttpRequest.status === 200 ) {
+					var response;
+					try {
+						response = JSON.parse ( xmlHttpRequest.responseText );
+					}
+					catch ( e ) {
+						returnOnError ( 'JSON parsing error. File : ' + xmlHttpRequest.responseURL );
+					}
+					returnOnOk ( response );
+				}
+				else {
+					returnOnError ( 'Error XMLHttpRequest - Status : ' + xmlHttpRequest.status + ' - StatusText : ' + xmlHttpRequest.statusText + ' - File : ' + xmlHttpRequest.responseURL );
+				}
 			}
-		]
-	);
+		};
+		
+		xmlHttpRequest.open ( "GET", _XMLHttpRequestUrl, true );
+		xmlHttpRequest.overrideMimeType ( 'application/json' );
+		xmlHttpRequest.send ( null );
+		
+	};
 	
+	/*
+	--- End of _StartXMLHttpRequest function ---
+	*/
+	
+	var promises = [];
+	_XMLHttpRequestUrl = window.location.href.substr (0, window.location.href.lastIndexOf( '/') + 1 ) +'Maps/MapsConfig.json';
+	promises.push ( new Promise ( _StartXMLHttpRequest ) );
+	_XMLHttpRequestUrl = window.location.href.substr (0, window.location.href.lastIndexOf( '/') + 1 ) + 'Maps/Maps' + getLanguage ( ) +'.json';
+	promises.push ( new Promise ( _StartXMLHttpRequest ) );
+	Promise.all ( promises ).then ( 
+		function ( values ) {
+			require ( './MapBuilder' ) ( ).build ( values );
+		}
+	).catch ( 
+		function ( error ) {
+			document.getElementsByTagName ( 'body' )[0].innerHTML = error;
+		}
+	);
 } ) ( );
 
 /*
 --- End of Maps.js file ----------------------------------------------------------------------------------------
 */
-},{"./MapBuilder":3,"./TaskLoader":5}],5:[function(require,module,exports){
-/*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
-
-This  program is free software;
-you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation;
-either version 3 of the License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
-
-/*
---- TaskLoader.js file -----------------------------------------------------------------------------------------------
-This file contains:
-	- the TaskLoader object
-	- the module.exports implementation
-Notice:
-	why doing simple when you can do it complex?	
-Changes:
-
------------------------------------------------------------------------------------------------------------------------
-*/
-
-( function ( ){
-	
-	'use strict';
-
-	var TaskLoader = function ( ) {
-		
-		var _JsonFileLoader = function ( ) {
-			return {
-				start : function ( context, functionWhenFinish, fileUrl, taskNumber )
-				{
-					var xmlHttpRequest = new XMLHttpRequest ( );
-					xmlHttpRequest.timeout = 5000;
-					xmlHttpRequest.ontimeout = function ( event ) {
-						functionWhenFinish.call (  context,  null, taskNumber, 3 );
-					};
-					xmlHttpRequest.onreadystatechange = function ( ) {
-						if ( xmlHttpRequest.readyState === 4 ) {
-							var response = null;
-							if ( xmlHttpRequest.status === 200 ) {
-								try {
-									response = JSON.parse ( xmlHttpRequest.responseText );
-									functionWhenFinish.call (  context,  response, taskNumber, 2 );
-								}
-								catch ( e )
-								{
-									functionWhenFinish.call (  context,  null, taskNumber, 3 );
-								}
-							}
-							else {
-								functionWhenFinish.call (  context,  null, taskNumber, 3 );
-							}
-						}
-					};
-					xmlHttpRequest.open ( "GET", fileUrl, true );
-					xmlHttpRequest.overrideMimeType ( 'application/json' );
-					xmlHttpRequest.send ( null );
-				}
-			};
-		};
-		
-		var _TaskPointer = 0;
-		var _Tasks = [];
-
-		/*
-		--- taskRunner object -----------------------------------------------------------------------------------------
-
-		---------------------------------------------------------------------------------------------------------------
-		*/
-
-		return {
-			start : function ( tasks ) {
-				_Tasks = tasks;
-				var _TaskPointer = 0;
-				for ( _TaskPointer = 0; _TaskPointer < _Tasks.length; _TaskPointer ++ ) {
-					_Tasks [ _TaskPointer ].status = 0;
-				}
-				_TaskPointer = -1;
-				this.taskRunner ( );
-			},
-			taskRunner : function ( ) {
-				// status = 0 not started; status = 1 started; status = 2 finish ok; status = 3 finish not ok
-				var wait = false;
-				while (  ( ! wait ) && _TaskPointer < _Tasks.length   ) {
-					_Tasks [ _TaskPointer].status = 1;
-					switch ( _Tasks [ _TaskPointer ].task )
-					{
-						case 'loadJsonFile':
-							_JsonFileLoader ( ).start ( this, this.endTask, _Tasks [ _TaskPointer ].url, _TaskPointer );
-							_TaskPointer ++;
-							break;
-						case 'wait':
-							// calling endTask to avoid an infinite break if previous tasks are already finished
-							this.endTask ( "", _TaskPointer );
-							wait = true;
-							break;
-						case 'run' :
-							var params = (_Tasks [ _TaskPointer ].params ? _Tasks [ _TaskPointer ].params : [ ] );
-							if ( _Tasks [ _TaskPointer ].responses ) {
-								for (var responsesCounter = 0; responsesCounter < _Tasks [ _TaskPointer ].responses.length; responsesCounter ++ ) {
-									params.push ( _Tasks [ _Tasks [ _TaskPointer ].responses [ responsesCounter ]].response );
-								}
-							}
-							_Tasks [ _TaskPointer ].func.call ( _Tasks [ _TaskPointer ].context, params );
-							_Tasks [ _TaskPointer].status = 2;
-							_TaskPointer ++;
-							break;
-						default:
-							_TaskPointer ++;
-							break;
-					}
-				}
-			},
-			endTask : function ( response, taskNumber, status ) {
-				if ( 'loadJsonFile' === _Tasks [ taskNumber ].task ) {
-					_Tasks [ taskNumber ].response = response;
-					_Tasks [ taskNumber].status = status;
-					if ( 3 === status ) {
-						console.log ( 'File ' + _Tasks [ taskNumber ].url + ' not loaded.' );
-					}
-				}
-				if ( 'wait' === _Tasks [ _TaskPointer ].task ) {
-					var statusOK = true;
-					for (var statusCounter = 0; statusCounter < _TaskPointer; statusCounter ++ )
-					{
-						statusOK &= ( _Tasks [ statusCounter ].status >= 2 );
-					}
-					if ( statusOK ) {
-						_Tasks [ _TaskPointer ].status = 2;
-						_TaskPointer ++;
-						this.taskRunner ( );
-					}
-				}
-			}
-		};
-	};
-	/*
-	--- Exports -------------------------------------------------------------------------------------------------------
-	*/
-
-	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = TaskLoader;
-	}
-
-}());
-
-/*
---- End of TaskLoader.js file ----------------------------------------------------------------------------------------
-*/
-},{}],6:[function(require,module,exports){
+},{"./MapBuilder":3}],5:[function(require,module,exports){
 (function (global){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/

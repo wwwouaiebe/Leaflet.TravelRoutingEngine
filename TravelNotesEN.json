@@ -52,6 +52,10 @@
 		"msgstr" : "a pedestrian"
 	},
 	{
+		"msgid" : "HTMLViewsFactory - TransitMode train",
+		"msgstr" : "the train"
+	},
+	{
 		"msgid" : "HTMLViewsFactory - Travel distance&nbsp;:&nbsp;{distance}",
 		"msgstr" : "Travel distance&nbsp;:&nbsp;{distance}"
 	},
@@ -98,6 +102,10 @@
 	{
 		"msgid" : "NoteDialog - Note",
 		"msgstr" : "Note"
+	},
+	{
+		"msgid" : "NoteDialog - Open a configuration file",
+		"msgstr" : "Open a configuration file"
 	},
 	{
 		"msgid" : "NoteDialog - Phone",
@@ -296,14 +304,6 @@
 		"msgstr" : "Width : "
 	},
 	{
-		"msgid" : "Router - An error occurs when parsing the response",
-		"msgstr" : "An error occurs when parsing the response"
-	},
-	{
-		"msgid" : "Router - An error occurs when sending the request",
-		"msgstr" : "An error occurs when sending the request (Status: {status} - {statusText})"
-	},
-	{
 		"msgid" : "SortableList - Delete",
 		"msgstr" : "Delete"
 	},
@@ -333,7 +333,7 @@
 	},
 	{
 		"msgid" : "TravelEditor - Show all routes",
-		"msgstr" : "Afficher tous les trajets"
+		"msgstr" : "Show all routes"
 	},
 	{
 		"msgid" : "TravelEditor - This page ask to close; data are perhaps not saved.",

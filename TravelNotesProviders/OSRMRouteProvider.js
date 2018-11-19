@@ -1,4 +1,166 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict';
+
+/**
+ * Based off of [the offical Google document](https://developers.google.com/maps/documentation/utilities/polylinealgorithm)
+ *
+ * Some parts from [this implementation](http://facstaff.unca.edu/mcmcclur/GoogleMaps/EncodePolyline/PolylineEncoder.js)
+ * by [Mark McClure](http://facstaff.unca.edu/mcmcclur/)
+ *
+ * @module polyline
+ */
+
+var polyline = {};
+
+function py2_round(value) {
+    // Google's polyline algorithm uses the same rounding strategy as Python 2, which is different from JS for negative values
+    return Math.floor(Math.abs(value) + 0.5) * (value >= 0 ? 1 : -1);
+}
+
+function encode(current, previous, factor) {
+    current = py2_round(current * factor);
+    previous = py2_round(previous * factor);
+    var coordinate = current - previous;
+    coordinate <<= 1;
+    if (current - previous < 0) {
+        coordinate = ~coordinate;
+    }
+    var output = '';
+    while (coordinate >= 0x20) {
+        output += String.fromCharCode((0x20 | (coordinate & 0x1f)) + 63);
+        coordinate >>= 5;
+    }
+    output += String.fromCharCode(coordinate + 63);
+    return output;
+}
+
+/**
+ * Decodes to a [latitude, longitude] coordinates array.
+ *
+ * This is adapted from the implementation in Project-OSRM.
+ *
+ * @param {String} str
+ * @param {Number} precision
+ * @returns {Array}
+ *
+ * @see https://github.com/Project-OSRM/osrm-frontend/blob/master/WebContent/routing/OSRM.RoutingGeometry.js
+ */
+polyline.decode = function(str, precision) {
+    var index = 0,
+        lat = 0,
+        lng = 0,
+        coordinates = [],
+        shift = 0,
+        result = 0,
+        byte = null,
+        latitude_change,
+        longitude_change,
+        factor = Math.pow(10, precision || 5);
+
+    // Coordinates have variable length when encoded, so just keep
+    // track of whether we've hit the end of the string. In each
+    // loop iteration, a single coordinate is decoded.
+    while (index < str.length) {
+
+        // Reset shift, result, and byte
+        byte = null;
+        shift = 0;
+        result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+        shift = result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+        lat += latitude_change;
+        lng += longitude_change;
+
+        coordinates.push([lat / factor, lng / factor]);
+    }
+
+    return coordinates;
+};
+
+/**
+ * Encodes the given [latitude, longitude] coordinates array.
+ *
+ * @param {Array.<Array.<Number>>} coordinates
+ * @param {Number} precision
+ * @returns {String}
+ */
+polyline.encode = function(coordinates, precision) {
+    if (!coordinates.length) { return ''; }
+
+    var factor = Math.pow(10, precision || 5),
+        output = encode(coordinates[0][0], 0, factor) + encode(coordinates[0][1], 0, factor);
+
+    for (var i = 1; i < coordinates.length; i++) {
+        var a = coordinates[i], b = coordinates[i - 1];
+        output += encode(a[0], b[0], factor);
+        output += encode(a[1], b[1], factor);
+    }
+
+    return output;
+};
+
+function flipped(coords) {
+    var flipped = [];
+    for (var i = 0; i < coords.length; i++) {
+        flipped.push(coords[i].slice().reverse());
+    }
+    return flipped;
+}
+
+/**
+ * Encodes a GeoJSON LineString feature/geometry.
+ *
+ * @param {Object} geojson
+ * @param {Number} precision
+ * @returns {String}
+ */
+polyline.fromGeoJSON = function(geojson, precision) {
+    if (geojson && geojson.type === 'Feature') {
+        geojson = geojson.geometry;
+    }
+    if (!geojson || geojson.type !== 'LineString') {
+        throw new Error('Input must be a GeoJSON LineString');
+    }
+    return polyline.encode(flipped(geojson.coordinates), precision);
+};
+
+/**
+ * Decodes to a GeoJSON LineString geometry.
+ *
+ * @param {String} str
+ * @param {Number} precision
+ * @returns {Object}
+ */
+polyline.toGeoJSON = function(str, precision) {
+    var coords = polyline.decode(str, precision);
+    return {
+        type: 'LineString',
+        coordinates: flipped(coords)
+    };
+};
+
+if (typeof module === 'object' && module.exports) {
+    module.exports = polyline;
+}
+
+},{}],2:[function(require,module,exports){
 var languages = require('./languages');
 var instructions = languages.instructions;
 var grammars = languages.grammars;
@@ -295,7 +457,7 @@ module.exports = function(version) {
     };
 };
 
-},{"./languages":2}],2:[function(require,module,exports){
+},{"./languages":3}],3:[function(require,module,exports){
 // Load all language files explicitly to allow integration
 // with bundling tools like webpack and browserify
 var instructionsDa = require('./languages/translations/da.json');
@@ -407,7 +569,7 @@ module.exports = {
     abbreviations: abbreviations
 };
 
-},{"./languages/abbreviations/bg.json":3,"./languages/abbreviations/ca.json":4,"./languages/abbreviations/da.json":5,"./languages/abbreviations/de.json":6,"./languages/abbreviations/en.json":7,"./languages/abbreviations/es.json":8,"./languages/abbreviations/fr.json":9,"./languages/abbreviations/he.json":10,"./languages/abbreviations/hu.json":11,"./languages/abbreviations/lt.json":12,"./languages/abbreviations/nl.json":13,"./languages/abbreviations/ru.json":14,"./languages/abbreviations/sl.json":15,"./languages/abbreviations/sv.json":16,"./languages/abbreviations/uk.json":17,"./languages/abbreviations/vi.json":18,"./languages/grammar/fr.json":19,"./languages/grammar/ru.json":20,"./languages/translations/da.json":21,"./languages/translations/de.json":22,"./languages/translations/en.json":23,"./languages/translations/eo.json":24,"./languages/translations/es-ES.json":25,"./languages/translations/es.json":26,"./languages/translations/fi.json":27,"./languages/translations/fr.json":28,"./languages/translations/he.json":29,"./languages/translations/id.json":30,"./languages/translations/it.json":31,"./languages/translations/ko.json":32,"./languages/translations/my.json":33,"./languages/translations/nl.json":34,"./languages/translations/no.json":35,"./languages/translations/pl.json":36,"./languages/translations/pt-BR.json":37,"./languages/translations/pt-PT.json":38,"./languages/translations/ro.json":39,"./languages/translations/ru.json":40,"./languages/translations/sv.json":41,"./languages/translations/tr.json":42,"./languages/translations/uk.json":43,"./languages/translations/vi.json":44,"./languages/translations/zh-Hans.json":45}],3:[function(require,module,exports){
+},{"./languages/abbreviations/bg.json":4,"./languages/abbreviations/ca.json":5,"./languages/abbreviations/da.json":6,"./languages/abbreviations/de.json":7,"./languages/abbreviations/en.json":8,"./languages/abbreviations/es.json":9,"./languages/abbreviations/fr.json":10,"./languages/abbreviations/he.json":11,"./languages/abbreviations/hu.json":12,"./languages/abbreviations/lt.json":13,"./languages/abbreviations/nl.json":14,"./languages/abbreviations/ru.json":15,"./languages/abbreviations/sl.json":16,"./languages/abbreviations/sv.json":17,"./languages/abbreviations/uk.json":18,"./languages/abbreviations/vi.json":19,"./languages/grammar/fr.json":20,"./languages/grammar/ru.json":21,"./languages/translations/da.json":22,"./languages/translations/de.json":23,"./languages/translations/en.json":24,"./languages/translations/eo.json":25,"./languages/translations/es-ES.json":26,"./languages/translations/es.json":27,"./languages/translations/fi.json":28,"./languages/translations/fr.json":29,"./languages/translations/he.json":30,"./languages/translations/id.json":31,"./languages/translations/it.json":32,"./languages/translations/ko.json":33,"./languages/translations/my.json":34,"./languages/translations/nl.json":35,"./languages/translations/no.json":36,"./languages/translations/pl.json":37,"./languages/translations/pt-BR.json":38,"./languages/translations/pt-PT.json":39,"./languages/translations/ro.json":40,"./languages/translations/ru.json":41,"./languages/translations/sv.json":42,"./languages/translations/tr.json":43,"./languages/translations/uk.json":44,"./languages/translations/vi.json":45,"./languages/translations/zh-Hans.json":46}],4:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "международен": "Межд",
@@ -477,7 +639,7 @@ module.exports={
     }
 }
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "comunicacions": "Com.",
@@ -586,7 +748,7 @@ module.exports={
     }
 }
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "skole": "Sk.",
@@ -626,7 +788,7 @@ module.exports={
     }
 }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 module.exports={
     "abbreviations": {},
     "classifications": {},
@@ -642,7 +804,7 @@ module.exports={
     }
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "square": "Sq",
@@ -721,7 +883,7 @@ module.exports={
     }
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "segunda": "2ª",
@@ -772,7 +934,7 @@ module.exports={
     }
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "allée": "All",
@@ -1344,7 +1506,7 @@ module.exports={
     }
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "שדרות": "שד'"
@@ -1353,7 +1515,7 @@ module.exports={
     "directions": {}
 }
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 module.exports={
     "abbreviations": {},
     "classifications": {},
@@ -1369,7 +1531,7 @@ module.exports={
     }
 }
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "apartamentai": "Apt",
@@ -1431,7 +1593,7 @@ module.exports={
     }
 }
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "centrum": "Cntrm",
@@ -1479,7 +1641,7 @@ module.exports={
     }
 }
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "апостола": "ап.",
@@ -1529,7 +1691,7 @@ module.exports={
     }
 }
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 module.exports={
     "abbreviations": {},
     "classifications": {},
@@ -1545,7 +1707,7 @@ module.exports={
     }
 }
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "sankta": "s:ta",
@@ -1567,7 +1729,7 @@ module.exports={
     }
 }
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 module.exports={
     "abbreviations": {},
     "classifications": {},
@@ -1583,7 +1745,7 @@ module.exports={
     }
 }
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 module.exports={
     "abbreviations": {
         "viện bảo tàng": "VBT",
@@ -1638,7 +1800,7 @@ module.exports={
     }
 }
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 module.exports={
     "meta": {
         "regExpFlags": "gi"
@@ -1820,7 +1982,7 @@ module.exports={
     }
 }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 module.exports={
     "meta": {
         "regExpFlags": ""
@@ -2846,7 +3008,7 @@ module.exports={
     }
 }
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -3341,7 +3503,7 @@ module.exports={
     }
 }
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -3866,7 +4028,7 @@ module.exports={
     }
 }
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -4361,7 +4523,7 @@ module.exports={
     }
 }
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -4856,7 +5018,7 @@ module.exports={
     }
 }
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -5351,7 +5513,7 @@ module.exports={
     }
 }
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -5846,7 +6008,7 @@ module.exports={
     }
 }
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -6341,7 +6503,7 @@ module.exports={
     }
 }
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -6836,7 +6998,7 @@ module.exports={
     }
 }
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -7331,7 +7493,7 @@ module.exports={
     }
 }
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -7856,7 +8018,7 @@ module.exports={
     }
 }
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -8381,7 +8543,7 @@ module.exports={
     }
 }
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": false
@@ -8876,7 +9038,7 @@ module.exports={
     }
 }
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": false
@@ -9371,7 +9533,7 @@ module.exports={
     }
 }
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -9866,7 +10028,7 @@ module.exports={
     }
 }
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -10361,7 +10523,7 @@ module.exports={
     }
 }
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -10886,7 +11048,7 @@ module.exports={
     }
 }
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -11381,7 +11543,7 @@ module.exports={
     }
 }
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -11876,7 +12038,7 @@ module.exports={
     }
 }
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -12371,7 +12533,7 @@ module.exports={
     }
 }
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -12866,7 +13028,7 @@ module.exports={
     }
 }
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -13361,7 +13523,7 @@ module.exports={
     }
 }
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -13886,7 +14048,7 @@ module.exports={
     }
 }
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -14381,7 +14543,7 @@ module.exports={
     }
 }
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": true
@@ -14876,7 +15038,7 @@ module.exports={
     }
 }
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 module.exports={
     "meta": {
         "capitalizeFirstLetter": false
@@ -15371,161 +15533,6 @@ module.exports={
     }
 }
 
-},{}],46:[function(require,module,exports){
-'use strict';
-
-/**
- * Based off of [the offical Google document](https://developers.google.com/maps/documentation/utilities/polylinealgorithm)
- *
- * Some parts from [this implementation](http://facstaff.unca.edu/mcmcclur/GoogleMaps/EncodePolyline/PolylineEncoder.js)
- * by [Mark McClure](http://facstaff.unca.edu/mcmcclur/)
- *
- * @module polyline
- */
-
-var polyline = {};
-
-function encode(coordinate, factor) {
-    coordinate = Math.round(coordinate * factor);
-    coordinate <<= 1;
-    if (coordinate < 0) {
-        coordinate = ~coordinate;
-    }
-    var output = '';
-    while (coordinate >= 0x20) {
-        output += String.fromCharCode((0x20 | (coordinate & 0x1f)) + 63);
-        coordinate >>= 5;
-    }
-    output += String.fromCharCode(coordinate + 63);
-    return output;
-}
-
-/**
- * Decodes to a [latitude, longitude] coordinates array.
- *
- * This is adapted from the implementation in Project-OSRM.
- *
- * @param {String} str
- * @param {Number} precision
- * @returns {Array}
- *
- * @see https://github.com/Project-OSRM/osrm-frontend/blob/master/WebContent/routing/OSRM.RoutingGeometry.js
- */
-polyline.decode = function(str, precision) {
-    var index = 0,
-        lat = 0,
-        lng = 0,
-        coordinates = [],
-        shift = 0,
-        result = 0,
-        byte = null,
-        latitude_change,
-        longitude_change,
-        factor = Math.pow(10, precision || 5);
-
-    // Coordinates have variable length when encoded, so just keep
-    // track of whether we've hit the end of the string. In each
-    // loop iteration, a single coordinate is decoded.
-    while (index < str.length) {
-
-        // Reset shift, result, and byte
-        byte = null;
-        shift = 0;
-        result = 0;
-
-        do {
-            byte = str.charCodeAt(index++) - 63;
-            result |= (byte & 0x1f) << shift;
-            shift += 5;
-        } while (byte >= 0x20);
-
-        latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
-
-        shift = result = 0;
-
-        do {
-            byte = str.charCodeAt(index++) - 63;
-            result |= (byte & 0x1f) << shift;
-            shift += 5;
-        } while (byte >= 0x20);
-
-        longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
-
-        lat += latitude_change;
-        lng += longitude_change;
-
-        coordinates.push([lat / factor, lng / factor]);
-    }
-
-    return coordinates;
-};
-
-/**
- * Encodes the given [latitude, longitude] coordinates array.
- *
- * @param {Array.<Array.<Number>>} coordinates
- * @param {Number} precision
- * @returns {String}
- */
-polyline.encode = function(coordinates, precision) {
-    if (!coordinates.length) { return ''; }
-
-    var factor = Math.pow(10, precision || 5),
-        output = encode(coordinates[0][0], factor) + encode(coordinates[0][1], factor);
-
-    for (var i = 1; i < coordinates.length; i++) {
-        var a = coordinates[i], b = coordinates[i - 1];
-        output += encode(a[0] - b[0], factor);
-        output += encode(a[1] - b[1], factor);
-    }
-
-    return output;
-};
-
-function flipped(coords) {
-    var flipped = [];
-    for (var i = 0; i < coords.length; i++) {
-        flipped.push(coords[i].slice().reverse());
-    }
-    return flipped;
-}
-
-/**
- * Encodes a GeoJSON LineString feature/geometry.
- *
- * @param {Object} geojson
- * @param {Number} precision
- * @returns {String}
- */
-polyline.fromGeoJSON = function(geojson, precision) {
-    if (geojson && geojson.type === 'Feature') {
-        geojson = geojson.geometry;
-    }
-    if (!geojson || geojson.type !== 'LineString') {
-        throw new Error('Input must be a GeoJSON LineString');
-    }
-    return polyline.encode(flipped(geojson.coordinates), precision);
-};
-
-/**
- * Decodes to a GeoJSON LineString geometry.
- *
- * @param {String} str
- * @param {Number} precision
- * @returns {Object}
- */
-polyline.toGeoJSON = function(str, precision) {
-    var coords = polyline.decode(str, precision);
-    return {
-        type: 'LineString',
-        coordinates: flipped(coords)
-    };
-};
-
-if (typeof module === 'object' && module.exports) {
-    module.exports = polyline;
-}
-
 },{}],47:[function(require,module,exports){
 /*
 Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
@@ -15551,6 +15558,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 	var getOSRMRouteProvider = function ( ) {
 	
+		var _ProviderKey = '';
+		var _UserLanguage = 'fr';
+		var _Options;
+		var _Route;
+		var _Response = '';
+
+		var _NextPromise = 0;
+		var _Promises = [];
+		var _XMLHttpRequestUrl = '';
+		
 		var _IconList = 
 		{
 			"turn": {
@@ -15686,30 +15703,30 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 			}
 		};
 		
-		var _ParseResponse = function ( requestResponse, route, userLanguage ) {
+		/*
+		--- _ParseResponse function -----------------------------------------------------------------------------------
+
+		This function ...
+
+		---------------------------------------------------------------------------------------------------------------
+		*/
+
+		var _ParseResponse = function ( returnOnOk, returnOnError ) {
 			
-			var response = null;
-			try {
-				response = JSON.parse( requestResponse );
+			if ( "Ok" !== _Response.code )
+			{
+				returnOnError ( 'Response code not ok' );
 			}
-			catch ( e ) {
-				return false;
+			
+			if ( 0 === _Response.routes.length )
+			{
+				returnOnError ( 'Route not found' );
 			}
 
-			if ( "Ok" !== response.code )
-			{
-				return false;
-			}
+			_Route.itinerary.itineraryPoints.removeAll ( );
+			_Route.itinerary.maneuvers.removeAll ( );
 			
-			if ( 0 === response.routes.length )
-			{
-				return false;
-			}
-
-			route.itinerary.itineraryPoints.removeAll ( );
-			route.itinerary.maneuvers.removeAll ( );
-			
-			response.routes [ 0 ].geometry = require ( 'polyline' ).decode ( response.routes [ 0 ].geometry, 6 );
+			_Response.routes [ 0 ].geometry = require ( '@mapbox/polyline' ).decode ( _Response.routes [ 0 ].geometry, 6 );
 
 			var options = {};
 			options.hooks= {};
@@ -15722,23 +15739,23 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 			var osrmTextInstructions = require('osrm-text-instructions')('v5', options );
 
-			response.routes [ 0 ].legs.forEach ( 
+			_Response.routes [ 0 ].legs.forEach ( 
 				function ( leg ) {
 					var lastPointWithDistance = 0;
 					leg.steps.forEach ( 
 						function ( step ) {
-							step.geometry = require ( 'polyline' ).decode ( step.geometry, 6 );
+							step.geometry = require ( '@mapbox/polyline' ).decode ( step.geometry, 6 );
 
 							var maneuver = L.travelNotes.interface ( ).maneuver;
 							maneuver.iconName = _IconList [ step.maneuver.type ] ? _IconList [  step.maneuver.type ] [  step.maneuver.modifier ] || _IconList [  step.maneuver.type ] [ "default" ] : _IconList [ "default" ] [ "default" ];
-							maneuver.instruction = osrmTextInstructions.compile ( userLanguage, step );
+							maneuver.instruction = osrmTextInstructions.compile ( _UserLanguage, step );
 							maneuver.duration = step.duration;
 							var distance = 0;
 							for ( var geometryCounter = 0; ( 1 === step.geometry.length ) ? ( geometryCounter < 1 ) : ( geometryCounter < step.geometry.length )  ; geometryCounter ++ ) {
 								var itineraryPoint = L.travelNotes.interface ( ).itineraryPoint;
 								itineraryPoint.latLng = [ step.geometry [ geometryCounter ] [ 0 ], step.geometry [ geometryCounter ] [ 1 ] ];
 								itineraryPoint.distance = leg.annotation.distance [ lastPointWithDistance ] ? leg.annotation.distance [ lastPointWithDistance ] : 0;
-								route.itinerary.itineraryPoints.add ( itineraryPoint );
+								_Route.itinerary.itineraryPoints.add ( itineraryPoint );
 								if (geometryCounter !== step.geometry.length - 1 ) {
 									distance += itineraryPoint.distance;
 									lastPointWithDistance++;
@@ -15748,14 +15765,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 								}
 							}
 							maneuver.distance = distance;
-							route.itinerary.maneuvers.add ( maneuver );
+							_Route.itinerary.maneuvers.add ( maneuver );
 						}
 					);
 				}
 			);
 			
-			var wayPointsIterator = route.wayPoints.iterator;
-			response.waypoints.forEach ( 
+			var wayPointsIterator = _Route.wayPoints.iterator;
+			_Response.waypoints.forEach ( 
 				function ( wayPoint ) {
 					if ( ! wayPointsIterator.done ) {
 						wayPointsIterator.value.latLng = [ wayPoint.location [ 1 ] , wayPoint.location [ 0 ] ];
@@ -15763,10 +15780,22 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 				}
 			);
 
-			return true;
+			returnOnOk ( '' );
 		};
 		
-		var _GetUrl = function ( wayPoints, transitMode, providerKey, userLanguage, options ) {
+		/*
+		--- End of _ParseResponse function ---
+		*/
+
+		/*
+		--- _GetUrl function ------------------------------------------------------------------------------------------
+
+		This function ...
+
+		---------------------------------------------------------------------------------------------------------------
+		*/
+
+		var _GetUrl = function ( ) {
 			
 			var wayPointsToString = function ( wayPoint, result )  {
 				if ( null === result ) {
@@ -15775,26 +15804,107 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 				result += wayPoint.lng.toFixed ( 6 ) + ',' + wayPoint.lat.toFixed ( 6 ) + ';' ;
 				return result;
 			};
-			var wayPointsString = wayPoints.forEach ( wayPointsToString );
+			var wayPointsString = _Route.wayPoints.forEach ( wayPointsToString );
 
 			return 'https://router.project-osrm.org/route/v1/driving/' +
 				 wayPointsString.substr ( 0, wayPointsString.length - 1 ) +
 				'?geometries=polyline6&overview=full&steps=true&annotations=distance';
 		};
+
+		/*
+		--- End of _GetUrl function ---
+		*/
+
+		/*
+		--- _StartXMLHttpRequest function -----------------------------------------------------------------------------
+
+		This function ...
+
+		---------------------------------------------------------------------------------------------------------------
+		*/
+
+		var _StartXMLHttpRequest = function ( returnOnOk, returnOnError ) {
+			
+			var xmlHttpRequest = new XMLHttpRequest ( );
+			xmlHttpRequest.timeout = 5000;
+			
+			xmlHttpRequest.ontimeout = function ( event ) {
+				returnOnError ( 'TimeOut error' );
+			};
+			
+			xmlHttpRequest.onreadystatechange = function ( ) {
+				if ( xmlHttpRequest.readyState === 4 ) {
+					if ( xmlHttpRequest.status === 200 ) {
+						try {
+							_Response = JSON.parse ( xmlHttpRequest.responseText );
+						}
+						catch ( e ) {
+							returnOnError ( 'JSON parsing error' );
+						}
+						returnOnOk ( new Promise ( _Promises [ _NextPromise ++ ] ) );
+					}
+					else {
+						returnOnError ( 'Status : ' + this.status + ' statusText : ' + this.statusText );
+					}
+				}
+			};
+			
+			xmlHttpRequest.open ( "GET", _XMLHttpRequestUrl, true );
+			xmlHttpRequest.overrideMimeType ( 'application/json' );
+			xmlHttpRequest.send ( null );
+			
+		};
+
+		/*
+		--- End of _StartXMLHttpRequest function ---
+		*/
+
+		/*
+		--- _GetPromiseRoute function ---------------------------------------------------------------------------------
+
+		This function ...
+
+		---------------------------------------------------------------------------------------------------------------
+		*/
+
+		var _GetPromiseRoute = function ( route, options ) {
+			_Route = route;
+			_Options = options;
+			_Response = '';
+			
+			_XMLHttpRequestUrl = _GetUrl ( );
+			
+			_NextPromise = 0;
+			_Promises = [];
+			
+			_Promises.push ( _StartXMLHttpRequest );
+			_Promises.push ( _ParseResponse );
+			
+			return new Promise ( _Promises [ _NextPromise ++ ] );
+		};
 		
+		/*
+		--- End of _GetPromiseRoute function ---
+		*/
+
 		return {
+			
+			getPromiseRoute : function ( route, options ) {
+				return _GetPromiseRoute ( route, options );
+			},
 			get icon ( ) {
 				return 'iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAB3RJTUUH4QkaDwEMOImNWgAABTZJREFUSMftl21sFEUYx3+zu3ft9a7Q0tIXoKUCIkIVeYsECmgbBKIIEVC0QEs0UIEghA+CEkkIaCyJBhFBBC00qHxoQClvhgLyEonyckhbFKS90iK0FAqFHr273R0/XNlCymEREr44X3by7DPzm5n9z8x/hZRS8giKwiMqjwys3U/y/pIqdh0tp8RTS229F0yIaxtBz+R2jOjfhSFPJbW6L9Gab/zFdjfv5x/k2g0f4TYVISUCEJKmp8QfMGjjsLNoShozxvR7MHD1VS+D53+Pp/oqmqJYoEBAxzQlQoKmCMJUJTgAwDQkye0j2f1JJvHRzvsH/3m+jqfn5IOUICWGYZIY5WTScz1J751EYjsXArh45QZ73BV8W1RC7VUvNkVBEBzUoZXZPJEc03rwhboGkqettWYopeSb2SPIHPbkPZfvu6JSZizfidIExpQU5+eQ0M7VOnDS9LVcvNKAkBDtDOf35ZOIj3K2SjSXrnoZNDOPuvqbCCA+yklxfs6/g3O3HOXd/ANoikCakvPrphEfFWG9P1R6ni+3n6Ck4hJI6JUcS/YLqaQ/09nKuVx/kx6TVoGUmIZkYVYac18beG+wfeLnGIaBqZtseGckk59rXt7xH/5IwaHTRNjVO1Tt8wcY1b8rWxaPs3J/OHiarKVbsKkqqoCLW+eFPkB2uD0EfAEAOsa67oC+tHgzW387iyNMQ0qJ1xfA6wsgpSTcprHX7eHFBZus/DFp3XksMRoAX0Bn169nQ4N3HT+H0FQApqb3suLbj5Sx7UgZihA0Bgxmje5HeV4Ong05zB7bn8aAjhCCfSfOUfjLGatd5vBUkGDXVPYeKQ8NdldcCu7FgMHIPilWfMU2N2E2FVNK3pvwLLlvDqNzXBuS2rdh6dShfJCZhikldpvKmkK31e75vin4AjoAxWU1ocHV17zBimnS4bYtcKysGgC/T2feK/1bKHTu+AF4G4OfyH2m2oonxrgwTGmpPSRYms11VRFWPaA3vZCSMFvL4z3MpnFLorrZ3IkixG19y9DgmMjwWy34+0qDFe/RqR0AtjAbeUXFLcAbfjpJRHhwQI835QJU1zVYE4hqEx4anJocAwKEprK3uNKKZ6X3wjAlqiKYvXoP63c3wzfuKWHGil2oioJhSt7IaBbl/hPnsNuCYu2ZEhd6Hxcc/ovxuYUoqqB7QhSnVmRZid1z1lFZcx0BGLqB36+DBIddw6YKhITEaCen8qZbbQbmfE1ZVR2GYbBuwcuMHdrj7jMeN7CbVf+j8jI7jnmaBfbpZDrEuDClRFMVnA47LocdTVUwTUlctJPDK7Ot/KKj5ZSW1yIBw5R3QO/qQOaN7QcSNJvKq8sKaWhSq8th5+xXb7F40mA6xUbScNPPDa+fjjGRLMwczOm86bR1hgFw06eT/dFWwuzBZZ45bkDrLglX5kp8fh0hITk2kpOfTcFhb51ZafTrDJqZx7mL1xAED4+qzXMQrfFcB5ZMQPcbAFTWXichazU/3ya2UOVQcRXdMldRUX0teFT6DQo/ntgCek8jsPO4h1GLCrDbNZASv1+nX9d4sjJSyeidREJ00AhcqGtgn7uCjUUlHDt9AYdNQyDx+XQKlkxgxIAu9299jpbVMGT+JgzDsG4j2TQIacqgFhRBuKagCmHlaIpgZ+7r9O2e8N/NXsAwmbVmD2u2ubFpKpoiWpo9JNIIGr63R/dhWU4Gmqo8uMsE8OsG64tK2X3cQ7Gnhsv1jShS0L5tOL2SY8jok8Lk4anYm263h2Jv//+FeRjlHxKxS4in4X1YAAAAAElFTkSuQmCC';
 			},
-			getUrl : function ( wayPoints, transitMode, providerKey, userLanguage, options ) {
-				return _GetUrl ( wayPoints, transitMode, providerKey, userLanguage, options );
-			},
-			parseResponse : function ( requestResponse, route, userLanguage ) {
-				return _ParseResponse ( requestResponse, route, userLanguage );
-			},
 			get name ( ) { return 'OSRM';},
-			get transitModes ( ) { return { car : true, bike : false, pedestrian : false}; },
-			get providerKeyNeeded ( ) { return false; }
+			get transitModes ( ) { return { car : true, bike : false, pedestrian : false, train : false }; },
+			get providerKeyNeeded ( ) { return false; },
+
+			//get providerKey ( ) { return 0 < _ProviderKey.length; },
+			get providerKey ( ) { return _ProviderKey.length; },
+			set providerKey ( ProviderKey ) { if ( '' === _ProviderKey ) { _ProviderKey = ProviderKey;}},
+			
+			get userLanguage ( ) { return _UserLanguage; },
+			set userLanguage ( UserLanguage ) { _UserLanguage = UserLanguage; }
 		};
 	};
 	
@@ -15802,4 +15912,4 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 }());
 
-},{"osrm-text-instructions":1,"polyline":46}]},{},[47]);
+},{"@mapbox/polyline":1,"osrm-text-instructions":2}]},{},[47]);
