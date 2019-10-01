@@ -272,7 +272,7 @@ The streets are oriented so that a person who follows the path on the ground see
 The street we arrive at is Tiyou d'Hestreu. An arrow to the right indicates that you must turn right in the Basse Voie.
 We are in the city of Anthisnes and the hamlet of Limont.
 
-<img src="SVGIconEN.PNG" />
+<img src="SVGIconEN.png" />
 
 ##### A note with a text on a line
 
