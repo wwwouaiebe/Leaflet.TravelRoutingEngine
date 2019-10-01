@@ -1,6 +1,6 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 /*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
 
 This  program is free software;
 you can redistribute it and/or modify it under the terms of the 
@@ -176,7 +176,7 @@ Changes:
 */
 },{}],2:[function(require,module,exports){
 /*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
 
 This  program is free software;
 you can redistribute it and/or modify it under the terms of the 
@@ -271,7 +271,7 @@ Tests ...
 
 },{}],3:[function(require,module,exports){
 /*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
 
 This  program is free software;
 you can redistribute it and/or modify it under the terms of the 
@@ -351,15 +351,14 @@ Changes:
 					timeout           : Infinity
 				}
 			},
-			toolbarAlwaysVisible:false
+			toolbarAlwaysVisible:false,
+			layersOrder : [ "0", "1", "2", "3", "4", "12", "5", "13", "22", "21", "14", "23", "15", "16", "17", "18", "19", "20", "7", "6", "8", "9", "10", "11"]
 		};
 		
 		var _Map = null; // the map
 		
 		var _GeoLocator = require ( './GeoLocator' ) ( );
 
-		var _TravelNotesInterface = null; // the TravelNotes apps
-		
 		var _Layers = {}; // the layers
 
 		var _Attributions = {
@@ -369,6 +368,8 @@ Changes:
 			esri : '| Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community ',
 			kartverket : '| <a href="https://kartverket.no/" target="_blank">Kartverket</a> ',
 			ign : _Translator.getText ( "MapsBuilder - IGN" ),
+			spw : '| <a href="http://geoportail.wallonie.be/home.html" target=_blank">Service public de Wallonie (SPW)</a>',
+			vl : '| <a href="https://overheid.vlaanderen.be/Webdiensten-Ons-GIS-aanbod" target=_blank">Informatie Vlaanderen</a>',
 			mapbox : '| &copy; <a href="https://www.mapbox.com/about/maps/" target="_blank">Mapbox</a> ',
 			donate : '| <span style="color:red">&#x2764;</span> <a href="https://donate.openstreetmap.org/" target="_blank" title="' + _Translator.getText ( "MapsBuilder - Donate" ) + '">' + _Translator.getText ( "MapsBuilder - Donate" ) + '</a> ',
 			travelnotes : '| &copy; <a href="https://github.com/wwwouaiebe" target="_blank" title="https://github.com/wwwouaiebe">Maps & TravelNotes</a> '
@@ -462,16 +463,43 @@ Changes:
 			}
 			_Map.setMaxBounds ( null ); // don't remove - strange! zoom is not correct on the kartverket layer when this line is missing
 			_Map.setMaxBounds ( layer.options.bounds );
-			if ( _TravelNotesInterface && layer.options.layerId ) {
-				var userData = _TravelNotesInterface.userData;
+			if ( L.travelNotes && layer.options.layerId ) {
+				var userData = L.travelNotes.userData;
 				userData.layerId = layer.options.layerId;
-				_TravelNotesInterface.userData = userData;
+				L.travelNotes.userData = userData;
 			}
 				
 			_Map.fire ( 'baselayerchange', _Layers [ _LayerId ].layer )	;
 		};
 		
 		/* --- End of _SetLayer method --- */
+
+
+
+		/* 
+		--- _StorageAvailable function -----------------------------------------------------------------------------------------
+		
+		This function test if the storage API is available ( the API can be deactived by user....)
+		Adapted from MDN :-)
+
+		------------------------------------------------------------------------------------------------------------------------
+		*/
+		
+		var _StorageAvailable = function ( type ) {
+			try {
+				var storage = window [ type ];
+				var	x = '__storage_test__';
+				storage.setItem ( x, x );
+				storage.removeItem ( x );
+				return true;
+			}
+			catch ( e ) {
+				return false;
+			}				
+		};
+		/* --- End of storageAvailable function --- */		
+
+
 
 		/*
 		--- _BuildLayers method ------------------------------------------------------------------------------------------------
@@ -487,6 +515,7 @@ Changes:
 			_Layers [ '0' ] = {
 				layer : L.tileLayer ( 'https://{s}.tile.osm.org/{z}/{x}/{y}.png', { layerId : '0'} ),
 				name : _Translator.getText ( 'MapsBuilder - OSM Color') ,
+				myMaxZoom: 19,
 				toolbarText : 'OSM',
 				attribution : _Attributions.osm
 			};
@@ -504,19 +533,20 @@ Changes:
 			};
 			_Layers [ '6' ] = {
 				layer : L.tileLayer ( 
-					'https://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=matrikkel_bakgrunn&zoom={z}&x={x}&y={y}', 
+					'https://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?SERVICE=WMS&srs=epsg:3857&layers=norgeskart_bakgrunn&zoom={z}&x={x}&y={y}', 
 					{ 
 						layerId : '6',
-						bounds : L.latLngBounds ( L.latLng ( 56.84, 1.40 ), L.latLng ( 72.10, 35.15 ) )
+						bounds : L.latLngBounds ( L.latLng ( 56.84, 1.40 ), L.latLng ( 82.00, 40.00 ) )
 					}
 				),
 				name : _Translator.getText ( 'MapsBuilder - Kartverket Norway'),
 				toolbarText : 'N',
 				attribution : _Attributions.kartverket
 			};
-			if ( _TravelNotesInterface ) {
-				if ( 0 < _TravelNotesInterface.getProviderKey ( 'thunderforest' ).length ) {
-					providerKeys.thunderforest = _TravelNotesInterface.getProviderKey ( 'thunderforest' );
+			if ( _StorageAvailable ( 'sessionStorage' ) ) {
+				providerKeys.thunderforest = sessionStorage.getItem ( 'thunderforest' );
+				if ( providerKeys.thunderforest ) {
+					providerKeys.thunderforest = atob ( providerKeys.thunderforest );
 					_Layers [ '2' ] = {
 						layer : L.tileLayer ( 'https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=' + providerKeys.thunderforest, { layerId : '2'} ),
 						name : _Translator.getText ( 'MapsBuilder - Thunderforest - Transport' ),
@@ -542,7 +572,8 @@ Changes:
 						attribution : _Attributions.osm + _Attributions.thunderforest
 					};
 				}
-				if ( 0 < _TravelNotesInterface.getProviderKey ( 'ign' ).length ) {
+				providerKeys.ign = sessionStorage.getItem ( 'ign' );
+				if ( providerKeys.ign ) {
 					_Layers [ '7' ] = {
 						layer : L.tileLayer ( 
 							'https://www.ngi.be/cartoweb/1.0.0/topo/default/3857/{z}/{y}/{x}.png',
@@ -553,13 +584,148 @@ Changes:
 								bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
 							} 
 						),
-						name : _Translator.getText ( 'MapsBuilder - IGN-NGI - Belgium' ),
-						toolbarText : 'IGN',
+						name : _Translator.getText ( 'MapsBuilder - IGN - Now' ),
+						toolbarText : new Date( ).getFullYear( ),
 						attribution : _Attributions.ign
 					};
+					_Layers [ '13' ] = {
+						layer : L.tileLayer.wms("http://geoservices.wallonie.be/arcgis/services/CARTES_ANCIENNES/FERRARIS/MapServer/WMSServer", {
+							layers: '0',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.spw,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - SPW - Ferraris 1770 - 1776' ),
+						toolbarText : '1771',
+						attribution : _Attributions.spw
+					};
+					_Layers [ '14' ] = {
+						layer : L.tileLayer.wms("http://geoservices.wallonie.be/arcgis/services/CARTES_ANCIENNES/VDML/MapServer/WMSServer", {
+							layers: '0',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.spw,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - SPW - Vander Maelen 1850' ),
+						toolbarText : '1850',
+						attribution : _Attributions.spw
+					};
+					_Layers [ '15' ] = {
+						layer : L.tileLayer.wms("http://wms.ngi.be/inspire/cartesius/service", {
+							layers: 'map1873',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.ign,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - IGN 1873' ),
+						toolbarText : '1873',
+						attribution : _Attributions.ign
+					};
+					_Layers [ '16' ] = {
+						layer : L.tileLayer.wms("http://wms.ngi.be/inspire/cartesius/service", {
+							layers: 'map1904',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.ign,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - IGN 1904' ),
+						toolbarText : '1904',
+						attribution : _Attributions.ign
+					};
+					_Layers [ '17' ] = {
+						layer : L.tileLayer.wms("http://wms.ngi.be/inspire/cartesius/service", {
+							layers: 'map1939',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.ign,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - IGN 1939' ),
+						toolbarText : '1939',
+						attribution : _Attributions.ign
+					};
+					_Layers [ '18' ] = {
+						layer : L.tileLayer.wms("http://wms.ngi.be/inspire/cartesius/service", {
+							layers: 'map1969',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.ign,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - IGN 1969' ),
+						toolbarText : '1969',
+						attribution : _Attributions.ign
+					};
+					_Layers [ '19' ] = {
+						layer : L.tileLayer.wms("http://wms.ngi.be/inspire/cartesius/service", {
+							layers: 'map1981',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.ign,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - IGN 1981' ),
+						toolbarText : '1981',
+						attribution : _Attributions.ign
+					};
+					_Layers [ '20' ] = {
+						layer : L.tileLayer.wms("http://wms.ngi.be/inspire/cartesius/service", {
+							layers: 'map1989',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.ign,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - IGN 1989' ),
+						toolbarText : '1989',
+						attribution : _Attributions.ign
+					};
+					_Layers [ '21' ] = {
+						layer : L.tileLayer.wms("http://geoservices.wallonie.be/arcgis/services/PLAN_REGLEMENT/ATLAS_VV_MODIF/MapServer/WMSServer", {
+							layers: '3',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.spw,
+							myMinZoom : 14,
+							myMaxZoom: 18,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - SPW - Atlas 1841' ),
+						toolbarText : '1841',
+						attribution : _Attributions.spw
+					};
+					_Layers [ '22' ] = {
+						layer : L.tileLayer.wms("https://geoservices.informatievlaanderen.be/raadpleegdiensten/histcart/wms", {
+							layers: 'ferraris',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.vl,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - VL - Ferraris 1770 - 1776' ),
+						toolbarText : '1771',
+						attribution : _Attributions.vl
+					};
+					_Layers [ '23' ] = {
+						layer : L.tileLayer.wms("https://geoservices.informatievlaanderen.be/raadpleegdiensten/histcart/wms", {
+							layers: 'vandermaelen',
+							format: 'image/png',
+							transparent: true,
+							attribution: _Attributions.vl,
+							bounds : L.latLngBounds ( L.latLng ( 49.49, 2.54 ), L.latLng ( 51.51, 6.41 ) )
+						}),
+						name : _Translator.getText ( 'MapsBuilder - VL - Vander Maelen 1850' ),
+						toolbarText : '1850',
+						attribution : _Attributions.vl
+					};
 				}
-				if ( 0 < _TravelNotesInterface.getProviderKey ( 'mapbox' ).length ) {
-					providerKeys.mapbox = _TravelNotesInterface.getProviderKey ( 'mapbox' );
+				providerKeys.mapbox = sessionStorage.getItem ( 'mapbox' );
+				if ( providerKeys.mapbox ){
+					providerKeys.mapbox = atob ( providerKeys.mapbox );
 					_Layers [ '8' ] = {
 						layer : L.tileLayer ( 'https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/256/{z}/{x}/{y}?access_token=' + providerKeys.mapbox, { layerId : '8'} ),
 						name : 'Mapbox - Streets',
@@ -645,26 +811,30 @@ Changes:
 					var listener = function ( event ) {
 						_SetLayer ( event.target.layerId );
 					};
-					
-					for ( var layer in _Layers ) {
-						var mapsToolbarButton = _HtmlElementsFactory.create ( 
-							'div',
-							{
-								className : 'mapsToolbarButton mapsToolbarLayerButton',
-								innerHTML : _Layers [ layer ].toolbarText,
-								layerId : layer,
-								id: 'mapsToolbarLayer' + layer + 'Button',
-								title : _Layers [ layer ].name
-							},
-							mapsToolbarButtons
-						);
+					_Config.layersOrder.forEach (
+						function ( layer ) {
+							if ( _Layers [ layer ] ) {
+								var mapsToolbarButton = _HtmlElementsFactory.create ( 
+									'div',
+									{
+										className : 'mapsToolbarButton mapsToolbarLayerButton',
+										innerHTML : _Layers [ layer ].toolbarText,
+										layerId : layer,
+										id: 'mapsToolbarLayer' + layer + 'Button',
+										title : _Layers [ layer ].name
+									},
+									mapsToolbarButtons
+								);
 
-						mapsToolbarButton.addEventListener (
-							'click',
-							listener,
-							true
-						);
-					}
+								mapsToolbarButton.addEventListener (
+									'click',
+									listener,
+									true
+								);
+								
+							}
+						}
+					);
 
 					if ( ( 'https:' === window.location.protocol.toLowerCase ( ) ) && ( "geolocation" in navigator ) ) {
 						var mapsGeolocationButton = _HtmlElementsFactory.create ( 
@@ -812,22 +982,9 @@ Changes:
 		var _BuildTravelNotesControl = function ( ) {
 			if ( L.travelNotes ) {
 				var _HtmlElementsFactory = require ( './HTMLElementsFactory' ) ( );
-				_TravelNotesInterface = L.travelNotes.interface ( );
-				if ( ! _Config.travelNotesAsLeafletControl ) {
-					var mapsTravelNotes = _HtmlElementsFactory.create ( 
-						'div',
-						{
-							id : 'mapsTravelNotes'
-						},
-						document.getElementsByTagName ( 'body' ) [ 0 ]
-					);
-					_TravelNotesInterface.addControl ( _Map, "mapsTravelNotes", { position: "topright"} );
-				}
-				else
-				{
-					_TravelNotesInterface.addControl ( _Map, null, { position: "topright"} );
-				}
-				_TravelNotesInterface.rightContextMenu = true;
+				var mapsTravelNotes = _HtmlElementsFactory.create ( 'div', { id : 'mapsTravelNotes' }, document.getElementsByTagName ( 'body' ) [ 0 ] );
+				L.travelNotes.addControl ( _Map, "mapsTravelNotes" );
+				L.travelNotes.rightContextMenu = true;
 			}
 		};
 
@@ -908,11 +1065,11 @@ Changes:
 							document.getElementById ( "mapsMouseControl" ).style.visibility = "hidden";
 						}
 					}	
-					if ( _TravelNotesInterface ) {
+					if ( L.travelNotes  ) {
 						var baseLayer;
 						var layerId;
-						if ( _TravelNotesInterface.userData.layerId ) {
-							_SetLayer ( _TravelNotesInterface.userData.layerId );
+						if ( L.travelNotes.userData.layerId ) {
+							_SetLayer ( L.travelNotes.userData.layerId );
 						}
 					}
 				}
@@ -985,7 +1142,7 @@ Changes:
 */
 },{"./GeoLocator":1,"./HTMLElementsFactory":2,"./Translator":5}],4:[function(require,module,exports){
 /*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
 
 This  program is free software;
 you can redistribute it and/or modify it under the terms of the 
@@ -1099,7 +1256,8 @@ Changes:
 		}
 	).catch ( 
 		function ( error ) {
-			document.getElementsByTagName ( 'body' )[0].innerHTML = error;
+			console.log ( error );
+			//document.getElementsByTagName ( 'body' )[0].innerHTML = error;
 		}
 	);
 } ) ( );
@@ -1110,7 +1268,7 @@ Changes:
 },{"./MapBuilder":3}],5:[function(require,module,exports){
 (function (global){
 /*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
 This  program is free software;
 you can redistribute it and/or modify it under the terms of the 
 GNU General Public License as published by the Free Software Foundation;

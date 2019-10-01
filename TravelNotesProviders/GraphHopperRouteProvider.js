@@ -55,7 +55,7 @@ polyline.decode = function(str, precision) {
         byte = null,
         latitude_change,
         longitude_change,
-        factor = Math.pow(10, precision || 5);
+        factor = Math.pow(10, Number.isInteger(precision) ? precision : 5);
 
     // Coordinates have variable length when encoded, so just keep
     // track of whether we've hit the end of the string. In each
@@ -104,7 +104,7 @@ polyline.decode = function(str, precision) {
 polyline.encode = function(coordinates, precision) {
     if (!coordinates.length) { return ''; }
 
-    var factor = Math.pow(10, precision || 5),
+    var factor = Math.pow(10, Number.isInteger(precision) ? precision : 5),
         output = encode(coordinates[0][0], 0, factor) + encode(coordinates[0][1], 0, factor);
 
     for (var i = 1; i < coordinates.length; i++) {
@@ -162,7 +162,7 @@ if (typeof module === 'object' && module.exports) {
 
 },{}],2:[function(require,module,exports){
 /*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
 
 This  program is free software;
 you can redistribute it and/or modify it under the terms of the 
@@ -234,7 +234,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 					var itineraryPoints = [];
 					for ( var pointsCounter = 0; pointsCounter < path.points.length; pointsCounter ++ ) {
-						var itineraryPoint = L.travelNotes.interface ( ).itineraryPoint;
+						var itineraryPoint = L.travelNotes.itineraryPoint;
 						itineraryPoint.latLng = path.points [ pointsCounter ];
 						itineraryPoints.push ( itineraryPoint );
 						_Route.itinerary.itineraryPoints.add ( itineraryPoint );
@@ -242,7 +242,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 					path.instructions.forEach (
 						function ( instruction) {
-							var maneuver = L.travelNotes.interface ( ).maneuver;
+							var maneuver = L.travelNotes.maneuver;
 							maneuver.iconName = _IconList [ instruction.sign + 4 || 0]  ;
 							maneuver.instruction = instruction.text || '';
 							maneuver.duration = instruction.time / 1000;
@@ -414,7 +414,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 		};
 	};
 	
-	L.travelNotes.interface ( ).addProvider ( getGraphHopperRouteProvider ( ) );
+	L.travelNotes.addProvider ( getGraphHopperRouteProvider ( ) );
 
 }());
 

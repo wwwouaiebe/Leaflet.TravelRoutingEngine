@@ -5,7 +5,7 @@
 			"lat": 50.50923,
 			"lng": 5.49542
 		},
-		"zoom": 6
+		"zoom": 12
 	},
 	"theDevil": 
 	{
@@ -20,7 +20,7 @@
 		"left": "1051px"
 	},
 	"travelNotesAsLeafletControl": false,
-	"contactMail" : "http://www.ouaie.be/blog/pages/contact",
+	"contactMail" : "../blog/pages/Contact",
 	"donate": false,
 	"scaleControl": 
 	{
@@ -41,5 +41,6 @@
 		}
 	},
 	"toolbarTimeOut":1500,
-	"toolbarAlwaysVisible":false
+	"toolbarAlwaysVisible":false,
+	"layersOrder" : [ "0", "1", "2", "3", "4", "12", "5", "13", "22", "21", "14", "23", "15", "16", "17", "18", "19", "20", "7", "6"]
 }

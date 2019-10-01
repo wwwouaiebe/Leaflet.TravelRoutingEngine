@@ -60,7 +60,51 @@
 		"msgstr" : "Thunderforest - Landscape"
 	},
 	{
-		"msgid" : "MapsBuilder - IGN-NGI - Belgium",
-		"msgstr" : "IGN-NGI - Belgium"
+		"msgid" : "MapsBuilder - IGN 1873",
+		"msgstr" : "IGN-NGI - Belgium 1873"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN 1904",
+		"msgstr" : "IGN-NGI - Belgium 1904"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN 1939",
+		"msgstr" : "IGN-NGI - Belgium 1939"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN 1969",
+		"msgstr" : "IGN-NGI - Belgium 1969"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN 1981",
+		"msgstr" : "IGN-NGI - Belgium 1981"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN 1989",
+		"msgstr" : "IGN-NGI - Belgium 1989"
+	},
+	{
+		"msgid" : "MapsBuilder - IGN - Now",
+		"msgstr" : "IGN-NGI - Belgium now"
+	},
+	{
+		"msgid" : "MapsBuilder - SPW - Ferraris - 1770 - 1776",
+		"msgstr" : "Service Public de Wallonie - Ferraris map 1770 - 1776"
+	},
+	{
+		"msgid" : "MapsBuilder - SPW - Atlas 1841",
+		"msgstr" : "Service Public de Wallonie - Atlas de la voirie vicinale - 1841"
+	},
+	{
+		"msgid" : "MapsBuilder - SPW - Vander Maelen 1850",
+		"msgstr" : "Service Public de Wallonie - Vander Maelen map - 1850"
+	},
+	{
+		"msgid" : "MapsBuilder - VL - Ferraris 1770 - 1776",
+		"msgstr" : "Informatie Vlaanderen - Ferraris kaart - 1770 - 1776"
+	},
+	{
+		"msgid" : "MapsBuilder - VL - Vander Maelen 1850",
+		"msgstr" : "Informatie Vlaanderen - Vander Maelen kaart - 1850"
 	}
 ]

@@ -19,6 +19,31 @@
 		"radius":7,
 		"fill":false
 	},
+	"searchPointMarker" : {
+		"color" : "green",
+		"weight" : 4,
+		"radius" : 20,
+		"fill" : false
+	},
+	"searchPointPolyline" : {
+		"polyline" : {
+			"color" : "green",
+			"weight" : 4,
+			"radius" : 20,
+			"fill" : false
+		},
+		"minZoom" : 17
+	},
+	"previousSearchLimit" : {
+		"color" : "green",
+		"fill" : false,
+		"weight" : 1
+	},
+	"nextSearchLimit" : {
+		"color" : "red",
+		"fill" : false,
+		"weight" : 1
+	},
 	"wayPoint":
 	{
 		"reverseGeocoding":true
@@ -60,7 +85,27 @@
 			"color":"gray",
 			"weight":1
 		},
-		"style":"TravelNotes-NotesStyle"
+		"style":"TravelNotes-NotesStyle",
+		"svgIconWidth":200,
+		"svgAnleMaxDirection":
+		{
+			"right":35,
+			"slightRight":80,
+			"continue":100,
+			"slightLeft":145,
+			"left":200,
+			"sharpLeft":270,
+			"sharpRight":340
+		},
+		"svgZoom":17,
+		"svgAngleDistance":10,
+		"svgHamletDistance":200,
+		"svgVillageDistance":400,
+		"svgCityDistance":1200,
+		"svgTownDistance":1500,
+		"svgTimeOut":15000,
+		"cityPrefix":"<span class='TravelNotes-NoteHtml-Address-City'>",
+		"cityPostfix":"</span>"
 	},
 	"itineraryPointZoom":17,
 	"routeEditor":
@@ -74,5 +119,11 @@
 		"timeout":1000,
 		"startupRouteEdition":true
 	},
-	"haveBeforeUnloadWarning" : true
+	"haveBeforeUnloadWarning":true,
+	"overpassApiUrl":"https://lz4.overpass-api.de/api/interpreter",
+	"nominatim":
+	{
+		"url":"https://nominatim.openstreetmap.org/",
+		"language": "*"
+	}
 }

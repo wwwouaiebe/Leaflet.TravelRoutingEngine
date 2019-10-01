@@ -1,6 +1,6 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 /*
-Copyright - 2017 - Christian Guyette - Contact: http//www.ouaie.be/
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
 
 This  program is free software;
 you can redistribute it and/or modify it under the terms of the 
@@ -548,7 +548,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 					}
 					if ( 0 < addPoint && 4 > addPoint ) {
 						// an itinerary point is created from the node and is added to the itinerary
-						var itineraryPoint = L.travelNotes.interface ( ).itineraryPoint;
+						var itineraryPoint = L.travelNotes.itineraryPoint;
 						var node = _NodesMap.get ( nodeId );
 						itineraryPoint.latLng = [ node.lat , node.lon ];
 						route.itinerary.itineraryPoints.add ( itineraryPoint );
@@ -557,15 +557,23 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 						var stopNode = _StopsMap.get ( nodeId );
 						if ( stopNode ) {
 							
-							var maneuver = L.travelNotes.interface ( ).maneuver;
+							var maneuver = L.travelNotes.maneuver;
+							var stopName = null;
 							if ( stopNode.tags && stopNode.tags.name ) {
-								maneuver.instruction = stopNode.tags.name + '&nbsp;:&nbsp;';
+								stopName = stopNode.tags.name;
+								maneuver.instruction = stopName + '&nbsp;:&nbsp;';
 							}
 							if ( stopNode.id === startStop.id ) {
+								if ( stopName ) {
+									route.wayPoints.first.name = stopName;	
+								}
 								maneuver.iconName = 'kTrainStart';
 								maneuver.instruction += 'Monter dans le train';
 							}
 							else if ( stopNode.id === endStop.id ) {
+								if ( stopName ) {
+									route.wayPoints.last.name = stopName;	
+								}
 								maneuver.iconName = 'kTrainEnd';
 								maneuver.instruction += 'Descendre du train';
 							}
@@ -825,7 +833,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 				return;
 			}
 			
-			var baseDialog = L.travelNotes.interface ( ).baseDialog ;
+			var baseDialog = L.travelNotes.baseDialog ;
 			
 			baseDialog.addClickOkButtonEventListener ( onOkButtonClick );
 			baseDialog.addClickCancelButtonEventListener (onCancelButtonClick );
@@ -932,61 +940,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 		*/
 		
 		/*
-		--- _GetTasks function ----------------------------------------------------------------------------------------
-
-		This function ...
-
-		---------------------------------------------------------------------------------------------------------------
-		*/
-
-		var _GetTasks = function ( wayPoints, transitMode, providerKey, userLanguage, options ) {
-			
-			return [
-				{
-					task: 'loadJsonFile',
-					context : null,
-					func : _GetRelationsUrl
-				},
-				{	
-					task: 'wait'
-				},
-				{	
-					task: 'run',
-					context : null,
-					func : _GetRouteList,
-					useResponses : [ 0 ]
-				},
-				{	
-					task: 'showDialog',
-					func : L.travelNotes.interface ( ).selectDialog,
-					context : null,
-					useResponses : [ 2 ]
-				},
-				{	
-					task: 'wait'
-				},
-				{	
-					task: 'run',
-					context : null,
-					func : _SetSelectedRelationId,
-					useResponses : [ 0, 3 ]
-				},
-				{
-					task: 'loadJsonFile',
-					context : null,
-					func : _GetWayNodesUrl
-				},
-				{	
-					task: 'wait'
-				},
-			];
-		};
-		
-		/*
-		--- End of _GetTasks function ---
-		*/
-							
-		/*
 		--- PublicTransportRouteProvider object -----------------------------------------------------------------------
 
 		---------------------------------------------------------------------------------------------------------------
@@ -1012,7 +965,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 		};
 	};
 	
-	L.travelNotes.interface ( ).addProvider ( getPublicTransportRouteProvider ( ) );
+	L.travelNotes.addProvider ( getPublicTransportRouteProvider ( ) );
 
 }());
 
