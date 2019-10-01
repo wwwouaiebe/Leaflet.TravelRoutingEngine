@@ -20,11 +20,11 @@
 		"left": "1051px"
 	},
 	"travelNotesAsLeafletControl": false,
-	"contactMail" : "../blog/pages/Contact",
+	"contactMail" : "http://www.ouaie.be/blog/pages/Contact",
 	"donate": false,
 	"scaleControl": 
 	{
-		"imperial":false,
+		"imperial":true,
 		"metric":true
 	},
 	"mouseControl":true,
