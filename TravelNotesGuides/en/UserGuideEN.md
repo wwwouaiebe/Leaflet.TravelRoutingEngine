@@ -33,10 +33,10 @@ The **roadbook** is an HTML page that contains all the information of the travel
 If you use Travel & Notes only to create notes, you can skip all the part about the access keys. These are only used for calculating routes.
 
 Travel & Notes does not calculate routes and itineraries. It connects to a route provider to get this route. The different route providers that can currently be used
-are GraphHopper, Mapbox and OSRM. It is also possible to draw a polyline between two places, without following paths. A train route between two stations can also be added, provided
+are GraphHopper, OpenRouteService, Mapbox and OSRM. It is also possible to draw a polyline between two places, without following paths. A train route between two stations can also be added, provided
 that this route is encoded in OpenStreetMap, respecting the rules of public transport version 2.
 
-For GraphHopper and Mapbox it is necessary to have an access key (**API Key**) to connect to the server. Check the websites of these different providers to obtain an access key.
+For GraphHopper, OpenRouteService and Mapbox it is necessary to have an access key (**API Key**) to connect to the server. Check the websites of these different providers to obtain an access key.
 
 You must also correctly read the conditions of use of the access keys and check that what you do with Travel & Notes corresponds to these conditions of use.
 
@@ -50,7 +50,7 @@ followed by = followed by your access key. Several access keys can be introduced
 
 Sample:
 ```
-https://www.example.org/TravelNotes/?MapboxProviderKey=votre_clef_accessMapbox&GraphHopperProviderKey=votre_clef_acces_GraphHopper
+https://www.example.org/TravelNotes/?MapboxProviderKey=your_API_key_Mapbox&OpenRouteServiceProviderKey=your_API_key_OpenRouteService&GraphHopperProviderKey=your_API_key_GraphHopper
 ```
 
 The access keys are saved in the __sessionStorage__ of the browser. It is therefore not necessary to reintroduce them each time the page is refreshed. However, they are permanently erased
