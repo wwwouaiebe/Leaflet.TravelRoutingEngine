@@ -34,10 +34,10 @@ Le **livre de voyage** est une page HTML qui regroupe toute l'information du voy
 Si vous utilisez Travel & Notes uniquement pour créer des notes, vous pouvez ignorer toute la partie qui concernent les clefs d'accès. Celles-ci ne sont utilisées que pour le calcul des trajets.
 
 Travel & Notes ne calcule pas lui-même les itinéraires des trajets. Il se connecte chez un fournisseur d'itinéraires pour obtenir ce trajet. Les différents fournisseurs d'itinéraire qu'il est possible d'utiliser actuellement
-sont GraphHopper, Mapbox et OSRM. Il est également possible de tracer une polyline entre deux endroits, sans suivre de chemins. Un itinéraire en train entre deux gares peut aussi être ajouté, à condition
+sont GraphHopper, OpenRouteService, Mapbox et OSRM. Il est également possible de tracer une polyline entre deux endroits, sans suivre de chemins. Un itinéraire en train entre deux gares peut aussi être ajouté, à condition
 que cet itinéraire soit encodé dans Openstreetmap, en respectant les règles des transports publics version 2.
 
-Pour GraphHopper et Mapbox il est nécessaire de posséder une clef d'accès ( **API Key** ) pour se connecter au serveur. Consultez les sites internet de ces différents fournisseurs pour obtenir une clef d'accès.
+Pour GraphHopper, OpenRouteService et Mapbox il est nécessaire de posséder une clef d'accès ( **API Key** ) pour se connecter au serveur. Consultez les sites internet de ces différents fournisseurs pour obtenir une clef d'accès.
 
 Vous devez également lire correctement  les conditions d'utilisation des clefs d'accès et vérifier que ce que vous faites avec Travel & Notes correspond à ces conditions d'utilisation.
 
@@ -51,7 +51,7 @@ suivi de = suivi de votre clef d'accès. Plsieurs clef d'accès peuvent être in
 
 Exemple:
 ```
-https://www.example.org/TravelNotes/?MapboxProviderKey=votre_clef_accessMapbox&GraphHopperProviderKey=votre_clef_acces_GraphHopper
+https://www.example.org/TravelNotes/?MapboxProviderKey=votre_clef_accessMapbox&OpenRouteServiceProviderKey=votre_clef_accessOpenRouteService&GraphHopperProviderKey=votre_clef_acces_GraphHopper
 ```
 
 Les clefs d'accès sont sauvegardées dans le _sessionStorage_ du browser. Il n'est donc pas nécessaire de les réintroduire lors de chaque rafraichissement de la page. Cependant, elles sont définitivement effacées 
