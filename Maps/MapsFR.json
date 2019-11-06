@@ -44,6 +44,14 @@
 		"msgstr" : "Kartverket - Norvège"
 	},
 	{
+		"msgid" : "MapsBuilder - Lantmateriet Sweden",
+		"msgstr" : "Lantmäteriet - Suède"
+	},	
+	{
+		"msgid" : "MapsBuilder - Maanmittauslaitos",
+		"msgstr" : "Maanmittauslaitos - Finlande"
+	},	
+	{
 		"msgid" : "MapsBuilder - Thunderforest - Transport",
 		"msgstr" : "Thunderforest - Transports publics"
 	},

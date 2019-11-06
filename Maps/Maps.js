@@ -367,10 +367,12 @@ Changes:
 			thunderforest : '| Tiles courtesy of <a href="http://www.thunderforest.com/" target="_blank" title="Andy Allan">Andy Allan</a> ',
 			esri : '| Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community ',
 			kartverket : '| <a href="https://kartverket.no/" target="_blank">Kartverket</a> ',
+			maanmittauslaitos : '| <a href="https://www.maanmittauslaitos.fi/en/" target="_blank">Maanmittauslaitos</a> ',
 			ign : _Translator.getText ( "MapsBuilder - IGN" ),
 			spw : '| <a href="http://geoportail.wallonie.be/home.html" target=_blank">Service public de Wallonie (SPW)</a>',
 			vl : '| <a href="https://overheid.vlaanderen.be/Webdiensten-Ons-GIS-aanbod" target=_blank">Informatie Vlaanderen</a>',
 			mapbox : '| &copy; <a href="https://www.mapbox.com/about/maps/" target="_blank">Mapbox</a> ',
+			lantmateriet : '| &copy; <a href="https://www.lantmateriet.se/" target="_blank">Lantmäteriet</a> ',
 			donate : '| <span style="color:red">&#x2764;</span> <a href="https://donate.openstreetmap.org/" target="_blank" title="' + _Translator.getText ( "MapsBuilder - Donate" ) + '">' + _Translator.getText ( "MapsBuilder - Donate" ) + '</a> ',
 			travelnotes : '| &copy; <a href="https://github.com/wwwouaiebe" target="_blank" title="https://github.com/wwwouaiebe">Maps & TravelNotes</a> '
 		};
@@ -542,6 +544,20 @@ Changes:
 				name : _Translator.getText ( 'MapsBuilder - Kartverket Norway'),
 				toolbarText : 'N',
 				attribution : _Attributions.kartverket
+			};
+			_Layers [ '25' ] = {
+				layer : L.tileLayer ( 
+					'https://tiles.kartat.kapsi.fi/peruskartta/{z}/{x}/{y}.jpg', 
+					{ 
+						layerId : '25',
+						bounds : L.latLngBounds ( L.latLng ( 59.44507, 19.08325 ), L.latLng ( 70.0988, 31.62826 ) )
+					}
+				),
+				name : _Translator.getText ( 'MapsBuilder - Maanmittauslaitos'),
+				myMinZoom : 2,
+				myMaxZoom: 19,
+				toolbarText : 'FI',
+				attribution : _Attributions.maanmittauslaitos
 			};
 			if ( _StorageAvailable ( 'sessionStorage' ) ) {
 				providerKeys.thunderforest = sessionStorage.getItem ( 'thunderforest' );
@@ -721,6 +737,23 @@ Changes:
 						name : _Translator.getText ( 'MapsBuilder - VL - Vander Maelen 1850' ),
 						toolbarText : '1850',
 						attribution : _Attributions.vl
+					};
+				}
+				providerKeys.lantmateriet = sessionStorage.getItem ( 'lantmateriet' );
+				if ( providerKeys.lantmateriet ){
+					providerKeys.lantmateriet = atob ( providerKeys.lantmateriet );
+					_Layers [ '24' ] = {
+						layer : L.tileLayer ( 
+							'https://api.lantmateriet.se/open/topowebb-ccby/v1/wmts/token/' + providerKeys.lantmateriet + '/1.0.0/topowebb/default/3857/{z}/{y}/{x}.png',
+							{ 
+								layerId : '24',
+								myMaxZoom: 15,
+								bounds : L.latLngBounds ( L.latLng ( 53.9061, 6.31918 ), L.latLng ( 72.0992, 29.2857 ) )
+							}
+						),
+						name : _Translator.getText ( 'MapsBuilder - Lantmateriet Sweden'),
+						toolbarText : 'SE',
+						attribution : _Attributions.lantmateriet
 					};
 				}
 				providerKeys.mapbox = sessionStorage.getItem ( 'mapbox' );

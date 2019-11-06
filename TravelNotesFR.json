@@ -152,6 +152,10 @@
 		"msgstr" : "Masquer"
 	},
 	{
+		"msgid" : "FileLoader - Not possible to select as provider",
+		"msgstr" : "Impossible de sélectionner {provider}"
+	},
+	{
 		"msgid" : "HTMLViewsFactory - Itinerary computed by {provider} and optimized for {transitMode}",
 		"msgstr" : "Cet itinéraire à été calculé par {provider} et optimisé pour {transitMode}"
 	},
@@ -292,6 +296,22 @@
 		"msgstr" : "<span>Lien</span>&nbsp;:&nbsp;"
 	},
 	{
+		"msgid" : "Roadbook - show travel notes",
+		"msgstr" : "Notes du voyage"
+	},
+	{
+		"msgid" : "Roadbook - show maneuver",
+		"msgstr" : "Itinéraire"
+	},
+	{
+		"msgid" : "Roadbook - show routes notes",
+		"msgstr" : "Notes de l'itinéraire"
+	},
+	{
+		"msgid" : "Roadbook - Save",
+		"msgstr" : "Enrégistrer"
+	},
+	{
 		"msgid" : "RouteEditor - Distance",
 		"msgstr" : "<span>Distance</span>&nbsp;:&nbsp;{distance}"
 	},
@@ -408,10 +428,6 @@
 		"msgstr" : "Il n'est pas possible de supprimer un trajet quand celui-ci est en cours d'édition"
 	},
 	{
-		"msgid" : "TravelEditor - Not possible to save a travel without a save or cancel",
-		"msgstr" : "Des données non sauvées sont présentes dans l'éditeur de trajet. Sauvez ou abandonnez celles-ci avant de sauver le voyage dans un fichier"
-	},
-	{
 		"msgid" : "TravelEditor - This page ask to close; data are perhaps not saved.",
 		"msgstr" : "Cette page demande de confirmer sa fermeture ; des données saisies pourraient ne pas être enregistrées."
 	},
@@ -438,6 +454,10 @@
 	{
 		"msgid" : "TravelEditorUI - New route",
 		"msgstr" : "Nouveau trajet"
+	},
+	{
+		"msgid" : "TravelEditorUI - Not possible to merge a travel when a route is edited",
+		"msgstr" : "Il n'est pas possible de fusionner un voyage quand une route est en cours d'édition"
 	},
 	{
 		"msgid" : "TravelEditorUI - Open travel roadbook",

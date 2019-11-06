@@ -9,7 +9,7 @@
 	},
 	"theDevil": 
 	{
-		"addButton": false,
+		"addButton": true,
 		"title": "Reminder! The devil will know everything about you",
 		"text": "&#x1f47f;"
 	},
@@ -20,11 +20,11 @@
 		"left": "1051px"
 	},
 	"travelNotesAsLeafletControl": false,
-	"contactMail" : "http://www.ouaie.be/blog/pages/Contact",
+	"contactMail" : "../blog/pages/Contact",
 	"donate": false,
 	"scaleControl": 
 	{
-		"imperial":true,
+		"imperial":false,
 		"metric":true
 	},
 	"mouseControl":true,
@@ -42,5 +42,5 @@
 	},
 	"toolbarTimeOut":1500,
 	"toolbarAlwaysVisible":false,
-	"layersOrder" : [ "0", "1", "2", "3", "4", "12", "5", "13", "22", "21", "14", "23", "15", "16", "17", "18", "19", "20", "7", "6"]
+	"layersOrder" : [ "0", "1", "2", "3", "4", "12", "5", "13", "22", "21", "14", "23", "15", "16", "17", "18", "19", "20", "7", "6", "24", "25" ]
 }
