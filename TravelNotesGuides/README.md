@@ -25,7 +25,13 @@ And with Mapbox and GraphHopper, you can search a route for car, bike or pedestr
 see also the [demo](https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGUudHJ2).  This demo displays a travel with a route and two icons
 and without any control, so the user cannot modify the travel.
 
-[Demo - fr ](https://wwwouaiebe.github.io/leaflet.TravelNotes/?)
+See also :
+- This [demo](https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGUudHJ2&lng=en) displays a travel with a route and two icons and without any control, so the user cannot modify the travel.
+- This [demo](https://wwwouaiebe.github.io/leaflet.TravelNotes/?lng=en&fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlLVRyb21zw7gvc3VvbWkyMDE4MDYwOC50cnY=) displays a travel with the train, bus and bike from Liège to Tromso.
+- This [demo](https://wwwouaiebe.github.io/samples/Liege-Troms%C3%B8/suomi20180608-Roadbook.html) displays the roadbook of the previous demo
+
+
+
 
 __Avertissement__ : cette démo utilise le serveur de démo de OSRM. Voyez la page https://github.com/Project-OSRM/osrm-backend/wiki/Demo-server pour les conditions d'utilisation. 
 Suite à un traffic important sur ce serveur, vous pouvez fréquemment recevoir une erreur http 429.
@@ -35,7 +41,10 @@ Ajoutez simplement MapboxProviderKey=votre_API_key_Mapbox et/ou GraphHopperProvi
 
 Et avec Mapbox et Graphhopper, vous pouvez rechercher un trajet pour une voiture, un vélo ou un piéton.
 
-Voyez aussi la [démo](https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGUudHJ2) qui affiche un voyage avec un trajet et des icônes, sans aucun contrôle, et donc sans possibilité de modifications.
+Voyez aussi:
+- la [démo](https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGUudHJ2) qui affiche un voyage avec un trajet et des icônes, sans aucun contrôle, et donc sans possibilité de modifications.
+- la [démo](https://wwwouaiebe.github.io/leaflet.TravelNotes/?lng=en&fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlLVRyb21zw7gvc3VvbWkyMDE4MDYwOC50cnY=) qui affiche un voyage en train, bus et vélo de Liège à Tromso.
+- la [démo](https://wwwouaiebe.github.io/samples/Liege-Troms%C3%B8/suomi20180608-Roadbook.html) qui affiche le livre de voyage de la démo précédente.
 
 ## What's new in release 1.3.0
 
