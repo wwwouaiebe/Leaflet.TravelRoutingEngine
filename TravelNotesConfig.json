@@ -30,11 +30,11 @@
 	"errorUI":
 	{
 		"timeOut":10000,
-		"helpTimeOut":45000,
+		"helpTimeOut":30000,
 		"showError":true,
 		"showWarning":true,
 		"showInfo":true,
-		"showHelp":true
+		"showHelp":false
 	},
 	"geoLocation":{
 			"color":"red",
@@ -51,7 +51,7 @@
 	{
 		"showDialogButton":true,
 		"saveToSessionStorage":true,
-		"showAPIKeysInDialog":true,
+		"showAPIKeysInDialog":false,
 		"dialogHaveUnsecureButtons":true
 	},
 	"contextMenu":
@@ -125,7 +125,13 @@
 				"text":"················",
 				"iDashArray":[0,2] 
 			}
-		]
+		],
+		"elev":
+		{
+			"smooth" : true,
+			"smoothCoefficient": 0.25,
+			"smoothPoints": 3
+		}
 	},
 	"note":
 	{
