@@ -30,11 +30,11 @@
 	"errorUI":
 	{
 		"timeOut":10000,
-		"helpTimeOut":45000,
+		"helpTimeOut":30000,
 		"showError":true,
 		"showWarning":true,
 		"showInfo":true,
-		"showHelp":true
+		"showHelp":false
 	},
 	"geoLocation":{
 			"color":"red",
@@ -51,7 +51,7 @@
 	{
 		"showDialogButton":true,
 		"saveToSessionStorage":true,
-		"showAPIKeysInDialog":true,
+		"showAPIKeysInDialog":false,
 		"dialogHaveUnsecureButtons":true
 	},
 	"contextMenu":
@@ -133,6 +133,7 @@
 			"smoothPoints": 3
 		},
 		"showDragTooltip": -1
+		
 	},
 	"note":
 	{
@@ -187,5 +188,30 @@
 	{
 		"url":"https://nominatim.openstreetmap.org/",
 		"language": "*"
+	},
+	"printRouteMap":
+	{
+		"isEnabled" : true,
+		"maxTiles" : 120,
+		"paperWidth":287,
+		"paperHeight":200,
+		"pageBreak":false,
+		"printNotes":true,
+		"borderWidth":10,
+		"zoomFactor":15,
+		"entryPointMarker" : {
+			"color" : "green",
+			"weight" : 4,
+			"radius" : 10,
+			"fill" : true,
+			"fillOpacity" : 1
+		},
+		"exitPointMarker" : {
+			"color" : "red",
+			"weight" : 4,
+			"radius" : 10,
+			"fill" : true,
+			"fillOpacity" : 1
+		}
 	}
 }

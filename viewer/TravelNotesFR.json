@@ -112,6 +112,10 @@
 		"msgstr" : "Ajouter une note à ce trajet"
 	},
 	{
+		"msgid" : "ContextMenuFactory - Print route map",
+		"msgstr" : "Imprimer les cartes de ce trajet"
+	},
+	{
 		"msgid" : "ContextMenuFactory - Cancel modifications on this route",
 		"msgstr" : "Abandonner les modifications"
 	},
@@ -265,7 +269,7 @@
 	},
 	{
 		"msgid" : "HTMLViewsFactory - Travel footer",
-		"msgstr" : "Réalisé avec <a href='https://github.com/wwwouaiebe/leaflet.TravelNotes' target='_blank'>Travel & Notes</a>, <a href='http://www.ouaie.be/' target='_blank'>© wwwouaiebe 2017 2019</a>"
+		"msgstr" : "Réalisé avec <a href='https://github.com/wwwouaiebe/leaflet.TravelNotes' target='_blank'>Travel & Notes</a>, <a href='http://www.ouaie.be/' target='_blank'>© wwwouaiebe 2017 2020</a>, © <a href='http://www.openstreetmap.org/copyright' target='_blank' title='les contributeurs de OpenStreetMap'>les contributeurs de OpenStreetMap</a>"
 	},
 	{
 		"msgid" : "LayersToolbarUI - Layers",
@@ -394,6 +398,58 @@
 	{
 		"msgid" : "PasswordDialog - Password rules",
 		"msgstr" : "<p>Règles des mots de passe:</p><ul><li>Au moins 12 caractères</li><li>Au moins une majuscule</li><li>Au moins une minuscule</li><li>Au moins un chiffre</li><li>Au moins un caractère spécial</li></ul>"
+	},
+	{
+		"msgid" : "PrintFactory - Print",
+		"msgstr" : "Imprimer"
+	},
+	{
+		"msgid" : "PrintFactory - Cancel print",
+		"msgstr" : "Annuler l'impression"
+	},
+	{
+		"msgid" : "PrintFactory - The maximum of allowed pages is reached.",
+		"msgstr" : "Le maximum de pages autorisé est atteint."
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Border width",
+		"msgstr" : "Dimension de la marge:"
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Border width units",
+		"msgstr" : "mm."
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Paper height",
+		"msgstr" : "Hauteur du papier:"
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Paper height units",
+		"msgstr" : "mm."
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Paper width",
+		"msgstr" : "Largeur du papier:"
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Paper width units",
+		"msgstr" : "mm."
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Page break",
+		"msgstr" : "Insérer un saut de page"
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Print notes",
+		"msgstr" : "Imprimer les notes du trajet"
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Print",
+		"msgstr" : "Imprimer les cartes d'un trajet"
+	},
+	{
+		"msgid" : "PrintRouteMapDialog - Zoom factor",
+		"msgstr" : "Zoom:"
 	},
 	{
 		"msgid" : "ProfileWindow - Ascent: {ascent} m. - Descent: {descent} m. - Distance: {distance}",
@@ -636,15 +692,11 @@
 		"msgstr" : "sec"
 	},
 	{
-		"msgid" : "Help - gives a password for the APIKeys file or cancel",
-		"msgstr" : "<p>Le mot de passe est <span style='color:red'>Travel&Notes160</span></p><p>Si vous possédez une clef d'accès Mapbox, GraphHopper ou OpenRouteService, introduisez le mot de passe, terminez avec le bouton &#x1f197; et ensuite ouvrez la boite de dialogue d'édition des clefs d'accès (bouton &#x1f511;) pour entrer votre clef d'accès.</p><p>Si vous ne possédez pas de clef d'accès continuez en appuyant sur le bouton &#x274c;</p>"
-	},
-	{
 		"msgid" : "Help - Continue with interface",
-		"msgstr" : "Déplacez votre souris sur le rectangle noir <span style='color:white;background-color:black'> Travel &amp; Notes </span> dans le coin supérieur droit pour afficher l'interface"
+		"msgstr" : "<p>Déplacez votre souris sur le rectangle noir <span style='color:white;background-color:black'> Travel &amp; Notes </span> dans le coin supérieur droit pour afficher l'interface.</p><p>Si vous possédez une clef d'accès Mapbox, GraphHopper, OpenRouteService, Thunderforest ou Lantmateriet ouvrez la boite de dialogue d'édition des clefs d'accès (bouton &#x1f511; en haut de l'interface) pour entrer votre clef d'accès.</p>"
 	},
 	{
 		"msgid" : "Help - Complete the APIKeys",
-		"msgstr" : "<p>Introduisez à gauche le nom du fournisseur d'accès. Celui-ci doit être 'Mapbox', 'GraphHopper' ou 'OpenRouteservice' pour un fournisseur d'itinéraires ou 'Mapbox, 'Thunderforest' ou 'Lantmateriet' pour un fournisseur de cartes.</p><p>Complétez à droite avec votre clef d'accès</p><p>Utilisez le bouton + pour ajouter d'autres fournisseurs</p>"
+		"msgstr" : "<p>Utilisez le bouton + pour ajouter un fournisseur.</p><p>Introduisez à gauche le nom du fournisseur d'accès. Celui-ci doit être 'Mapbox', 'GraphHopper' ou 'OpenRouteservice' pour un fournisseur d'itinéraires ou 'Mapbox, 'Thunderforest' ou 'Lantmateriet' pour un fournisseur de cartes.</p><p>Complétez à droite avec votre clef d'accès</p>"
 	}
 ]
