@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: data/Collection.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: data/Collection.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/*
+Changes:
+	- v1.0.0:
+		- created
+	- v1.4.0:
+		- added next and previous method
+	- v1.6.0:
+		- Issue #65 : Time to go to ES6 modules?
+	- v1.8.0:
+		- Issue #100 : Fix circular dependancies with Collection
+Doc reviewed 20200729
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file Collection.js
+@copyright Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@typedef {Object} CollectionIterator
+@desc An iterator on the Collection
+@property {Object} value The object pointed by the iterator
+@property {?Object} previous The object before the object pointed by the iterator or null if the iterator
+is on the first object
+@property {?Object} next The object after the object pointed by the iterator or null if the iterator
+is on the last object
+@property {boolean} done Move the iterator to the next object and return true when the end of the Collection
+is reached
+@property {boolean} first True when the iterator is on the first object of the Collection
+@property {boolean} last True when the iterator is on the last object of the Collection
+@property {number} index The position of the iterator in the Collection
+@public
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module Collection
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+import { ZERO, ONE, TWO, NOT_FOUND } from '../util/Constants.js';
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourNewCollection
+@desc constructor of Collection objects
+@param {constructor} objectConstructor the constructor of objects to be stored in the Collection
+@return {Collection} an instance of a Collection object
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourNewCollection ( objectConstructor ) {
+
+	const SWAP_UP = -1;
+	const SWAP_DOWN = 1;
+	const NEXT = 1;
+	const PREVIOUS = -1;
+
+	const myObjectConstructor = objectConstructor;
+	let myArray = [];
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function mySetObjName
+	@desc Search the name of the objects added to the Collection
+	@return {string} the name of the object
+	@throws When the object returned by objectConstructor don't have a name
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function mySetObjName ( ) {
+		let tmpObject = myObjectConstructor ( );
+		if ( ( ! tmpObject.objType ) || ( ! tmpObject.objType.name ) ) {
+			throw new Error ( 'invalid object name for collection' );
+		}
+		return tmpObject.objType.name;
+	}
+
+	/* ---------------------------------------------------------------------------------------------------------------*/
+
+	const myObjName = mySetObjName ( );
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myAdd
+	@desc Add an object at the end of the Collection
+	@param {Object} object The object to add
+	@throws when the object type is invalid
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myAdd ( object ) {
+		if ( ( ! object.objType ) || ( ! object.objType.name ) || ( object.objType.name !== myObjName ) ) {
+			throw new Error ( 'invalid object name for add function' );
+		}
+		myArray.push ( object );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myIterator
+	@desc Manage an iterator on the collection
+	@return {CollectionIterator} An iterator on the Collection
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myIterator ( ) {
+		let index = NOT_FOUND;
+		return Object.seal (
+			{
+				get value ( ) { return index &lt; myArray.length ? myArray [ index ] : null; },
+				get previous ( ) { return ZERO >= index ? null : myArray [ index - ONE ]; },
+				get next ( ) { return index &lt; myArray.length - ONE ? myArray [ index + ONE ] : null; },
+				get done ( ) { return ++ index >= myArray.length; },
+				get first ( ) { return ZERO === index; },
+				get last ( ) { return index >= myArray.length - ONE; },
+				get index ( ) { return index; }
+			}
+		);
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myIndexOfObjId
+	@desc return the position of an object in the Collection
+	@param {!number} objId The objId of the object to locate
+	@return {number} the position of the object in the Collection
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myIndexOfObjId ( objId ) {
+		let index = myArray.findIndex (
+			element => element.objId === objId
+		);
+		return index;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myNextOrPrevious
+	@desc gives the previous or next object in the collection that fullfil a given condition
+	@param {!number} objId The objId of the object from witch the search start
+	@param {?function} condition A fonction used to compare the objects. If null, ( ) => true is used
+	@param (!number} direction The direction to follow. Must be NEXT or PREVIOUS
+	@return (?Object) An object or null if nothing found
+	@throws When direction is not NEXT or PREVIOUS or when the starting object is not found
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myNextOrPrevious ( objId, condition, direction ) {
+		let index = myIndexOfObjId ( objId );
+		if ( NOT_FOUND === index ) {
+			throw new Error ( 'invalid objId for next or previous function' );
+		}
+		if ( direction !== NEXT &amp;&amp; direction !== PREVIOUS ) {
+			throw new Error ( 'invalid direction' );
+		}
+
+		let otherCondition = condition;
+		if ( ! otherCondition ) {
+			otherCondition = ( ) => true;
+		}
+		index += direction;
+
+		while ( ( NOT_FOUND &lt; index ) &amp;&amp; ( index &lt; myArray.length ) &amp;&amp; ! otherCondition ( myArray [ index ] ) ) {
+			index += direction;
+		}
+		if ( NOT_FOUND === index || myArray.length === index ) {
+			return null;
+		}
+
+		return myArray [ index ];
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@class
+	@classdesc Class used to store objects in an iterable
+	@see {@link newCollection} for constructor
+	@hideconstructor
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	class Collection {
+
+		/**
+		Add an object at the end of the collection
+		@param {Object} object The object to add
+		@throws when the object type is invalid
+		*/
+
+		add ( object ) { myAdd ( object ); }
+
+		/**
+		Executes a function on each object of the Collection and returns the final result
+		@param {function} funct The function to execute
+		@return The final result
+		*/
+
+		forEach ( funct ) {
+			let result = null;
+			let iterator = myIterator ( );
+			while ( ! iterator.done ) {
+				result = funct ( iterator.value, result );
+			}
+			return result;
+		}
+
+		/**
+		Search an object in the Collection
+		@param {!number} objId The objId of the object to search
+		@return the object with the given objId or null when the object is not found
+		*/
+
+		getAt ( objId ) {
+			let index = myIndexOfObjId ( objId );
+			if ( NOT_FOUND === index ) {
+				return null;
+			}
+			return myArray [ index ];
+		}
+
+		/**
+		Move an object near another object in the Collection
+		@param {!number} objId The objId of the object to move
+		@param {!number} targetObjId The objId of the object near witch the object will be moved
+		@param {boolean} moveBefore When true, the object is moved before the target, when false after the target
+		@throws when objId or targetObjId are invalid
+		*/
+
+		moveTo ( objId, targetObjId, moveBefore ) {
+			let oldPosition = myIndexOfObjId ( objId );
+			let newPosition = myIndexOfObjId ( targetObjId );
+			if ( NOT_FOUND === oldPosition || NOT_FOUND === newPosition ) {
+				throw new Error ( 'invalid objId for function  myMoveTo' );
+			}
+			if ( ! moveBefore ) {
+				newPosition ++;
+			}
+			myArray.splice ( newPosition, ZERO, myArray [ oldPosition ] );
+			if ( newPosition &lt; oldPosition ) {
+				oldPosition ++;
+			}
+			myArray.splice ( oldPosition, ONE );
+		}
+
+		/**
+		@desc gives the next object in the collection that fullfil a given condition
+		@param {!number} objId The objId of the object from witch the search start
+		@param {?function} condition A fonction used to compare the objects. If null, ( ) => true is used
+		@return (?Object) An object or null if nothing found
+		@throws When the starting object is not found
+		*/
+
+		next ( objId, condition ) { return myNextOrPrevious ( objId, condition, NEXT ); }
+
+		/**
+		@desc gives the previous object in the collection that fullfil a given condition
+		@param {!number} objId The objId of the object from witch the search start
+		@param {?function} condition A fonction used to compare the objects. If null, ( ) => true is used
+		@return (?Object) An object or null if nothing found
+		@throws When the starting object is not found
+		*/
+
+		previous ( objId, condition ) { return myNextOrPrevious ( objId, condition, PREVIOUS ); }
+
+		/**
+		Remove an object from the Collection
+		@param {!number} objId The objId of the object to remove
+		@throws when the object is not found
+		*/
+
+		remove ( objId ) {
+			let index = myIndexOfObjId ( objId );
+			if ( NOT_FOUND === index ) {
+				throw new Error ( 'invalid objId for remove function' );
+			}
+			myArray.splice ( myIndexOfObjId ( objId ), ONE );
+		}
+
+		/**
+		Remove all objects from the Collection
+		@param {?boolean} exceptFirstLast When true, first and last objects are not removed
+		*/
+
+		removeAll ( exceptFirstLast ) {
+			if ( exceptFirstLast ) {
+				myArray.splice ( ONE, myArray.length - TWO );
+			}
+			else {
+				myArray.length = ZERO;
+			}
+		}
+
+		/**
+		Replace an object in the Collection with another object
+		@param {!number} oldObjId the objId of the object to replace
+		@param {Object} newObject The new object
+		@throws when the object type of newObject is invalid or when the object to replace is not found
+		*/
+
+		replace ( oldObjId, newObject ) {
+			let index = myIndexOfObjId ( oldObjId );
+			if ( NOT_FOUND === index ) {
+				throw new Error ( 'invalid objId for replace function' );
+			}
+			if ( ( ! newObject.objType ) || ( ! newObject.objType.name ) || ( newObject.objType.name !== myObjName ) ) {
+				throw new Error ( 'invalid object name for replace function' );
+			}
+			myArray [ index ] = newObject;
+		}
+
+		/**
+		Reverse the objects in the collection
+		*/
+
+		reverse ( ) { myArray.reverse ( ); }
+
+		/**
+		Sort the collection, using a function
+		@param {function} compareFunction The function to use to compare objects in the Collection
+		*/
+
+		sort ( compareFunction ) { myArray.sort ( compareFunction ); }
+
+		/**
+		Reverse an Object with the previous or next object in the Collection
+		@param {!number} objId The objId of the object to swap
+		@param {boolean} swapUp When true the object is swapped with the previous one,
+		when false with the next one
+		@throws when the object is not found or when the swap is not possible
+		*/
+
+		swap ( objId, swapUp ) {
+			let index = myIndexOfObjId ( objId );
+			if (
+				( NOT_FOUND === index )
+				||
+				( ( ZERO === index ) &amp;&amp; swapUp )
+				||
+				( ( myArray.length - ONE === index ) &amp;&amp; ( ! swapUp ) )
+			) {
+				throw new Error ( 'invalid objId for swap function' );
+			}
+			let tmp = myArray [ index ];
+			myArray [ index ] = myArray [ index + ( swapUp ? SWAP_UP : SWAP_DOWN ) ];
+			myArray [ index + ( swapUp ? SWAP_UP : SWAP_DOWN ) ] = tmp;
+		}
+
+		/**
+		The first object of the Collection
+		@type {Object}
+		@readonly
+		*/
+
+		get first ( ) { return myArray [ ZERO ]; }
+
+		/**
+		An iterator on the Collection
+		@type {CollectionIterator}
+		@readonly
+		@see {@link module:Collection~CollectionIterator}
+		*/
+
+		get iterator ( ) { return myIterator ( ); }
+
+		/**
+		The last object of the Collection
+		@type {Object}
+		@readonly
+		*/
+
+		get last ( ) { return myArray [ myArray.length - ONE ]; }
+
+		/**
+		The length of the Collection
+		@type {number}
+		@readonly
+		*/
+
+		get length ( ) { return myArray.length; }
+
+		/**
+		an Array with the objects in the collection
+		@type {Array}
+		*/
+
+		get jsonObject ( ) {
+			let array = [ ];
+			let iterator = myIterator ( );
+			while ( ! iterator.done ) {
+				array.push ( iterator.value.jsonObject );
+			}
+
+			return array;
+		}
+		set jsonObject ( something ) {
+			myArray.length = ZERO;
+			let newObject = null;
+
+			something.forEach (
+				arrayObject => {
+					newObject = myObjectConstructor ( );
+					newObject.jsonObject = arrayObject;
+					myAdd ( newObject );
+				}
+			);
+		}
+	}
+
+	return Object.seal ( new Collection );
+}
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function newCollection
+	@desc constructor of Collection objects
+	@param {constructor} objectConstructor the constructor of objects to be stored in the Collection
+	@return {Collection} an instance of a Collection object
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourNewCollection as newCollection
+};
+
+/*
+--- End of Collection.js file -------------------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:02 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: UI/TravelUI.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: UI/TravelUI.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 - wwwouaiebe - Contact: http//www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/*
+Changes:
+	- v1.0.0:
+		- created
+	- v1.1.0:
+		- Issue #26 : added confirmation message before leaving the page when data modified.
+		- Issue #31 : Add a command to import from others maps
+	- v1.4.0:
+		- Replacing DataManager with TravelNotesData, Config, Version and DataSearchEngine
+		- moving file functions from TravelEditor to the new FileLoader
+		- modified event listener for cancel travel button ( issue #45 )
+	- v1.5.0:
+		- Issue #52 : when saving the travel to the file, save also the edited route.
+		- Issue #60 : Add translations for roadbook
+	- v1.6.0:
+		- Issue #65 : Time to go to ES6 modules?
+		- Issue #63 : Find a better solution for provider keys upload
+		- Issue #75 : Merge Maps and TravelNotes
+	- v1.7.0:
+		- Issue #90 : Open profiles are not closed when opening a travel or when starting a new travel
+	- v1.12.0:
+		- Issue #120 : Review the UserInterface
+Doc reviewed 20200817
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file TravelUI.js
+@copyright Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module TravelUI
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+import { theTranslator } from '../UI/Translator.js';
+import { theConfig } from '../data/Config.js';
+import { theTravelNotesData } from '../data/TravelNotesData.js';
+import { theErrorsUI } from '../UI/ErrorsUI.js';
+import { theTravelEditor } from '../core/TravelEditor.js';
+import { theHTMLElementsFactory } from '../util/HTMLElementsFactory.js';
+import { newFileLoader } from '../core/FileLoader.js';
+import { newRouteContextMenu } from '../contextMenus/RouteContextMenu.js';
+import { theRouteEditor } from '../core/RouteEditor.js';
+import { theEventDispatcher } from '../util/EventDispatcher.js';
+import { LAT_LNG, INVALID_OBJ_ID, ZERO, MOUSE_WHEEL_FACTORS } from '../util/Constants.js';
+
+let ourRoutesList = null;
+let ourTravelNameInput = null;
+let ourUIMainDiv = null;
+let ourDraggedRouteObjId = ZERO;
+let ourButtonsDiv = null;
+let ourOpenTravelInput = null;
+let ourImportTravelInput = null;
+let ourRoutesHeaderDiv = null;
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRouteListWheel
+@desc wheel event listener for the route list element
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRouteListWheel ( wheelEvent ) {
+	if ( wheelEvent.deltaY ) {
+		wheelEvent.target.scrollTop +=
+			wheelEvent.deltaY * MOUSE_WHEEL_FACTORS [ wheelEvent.deltaMode ];
+	}
+	wheelEvent.stopPropagation ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnTravelNameInputChange
+@desc change event listener for the travel name input element
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnTravelNameInputChange ( changeEvent ) {
+	theTravelNotesData.travel.name = changeEvent.target.value;
+	theEventDispatcher.dispatch ( 'roadbookupdate' );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateTravelNameDiv
+@desc This method creates the travel name div
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateTravelNameDiv ( ) {
+	let travelNameDiv = theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-FlexRowDiv'
+		},
+		ourUIMainDiv
+	);
+	theHTMLElementsFactory.create (
+		'span',
+		{
+			innerHTML : theTranslator.getText ( 'TravelUI - Travel' )
+		},
+		travelNameDiv
+	);
+	ourTravelNameInput = theHTMLElementsFactory.create (
+		'input',
+		{
+			id : 'TravelNotes-TravelUI-InputTravelName',
+			type : 'text',
+			placeholder : 'TravelNotes',
+			value : theTravelNotesData.travel.name
+		},
+		travelNameDiv
+	);
+	ourTravelNameInput.addEventListener ( 'change', ourOnTravelNameInputChange, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnCancelTravelButtonClick
+@desc click event listener for the cancel travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnCancelTravelButtonClick ( clickEvent ) {
+	clickEvent.stopPropagation ();
+	theTravelEditor.clear ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateCancelTravelButton
+@desc This method creates the cancel travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateCancelTravelButton ( ) {
+	theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-Button',
+			title : theTranslator.getText ( 'TravelUI - Cancel travel' ),
+			innerHTML : '&amp;#x274c;' // 274c = ❌
+		},
+		ourButtonsDiv
+	)
+		.addEventListener ( 'click', ourOnCancelTravelButtonClick, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnSaveTravelButtonClick
+@desc click event listener for the save travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnSaveTravelButtonClick ( clickEvent ) {
+	clickEvent.stopPropagation ( );
+	theTravelEditor.saveTravel ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateSaveTravelButton
+@desc This method creates the save travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateSaveTravelButton ( ) {
+	theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-Button',
+			title : theTranslator.getText ( 'TravelUI - Save travel' ),
+			innerHTML : '&amp;#x1f4be;' // 1f4be = 💾
+		},
+		ourButtonsDiv
+	)
+		.addEventListener ( 'click', ourOnSaveTravelButtonClick, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnOpenTravelInputChange
+@desc change event listener for the open travel input element
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnOpenTravelInputChange ( changeEvent ) {
+	changeEvent.stopPropagation ( );
+	newFileLoader ( ).openLocalFile ( changeEvent );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnOpenTravelButtonClick
+@desc click event listener for the open travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnOpenTravelButtonClick ( ) {
+	if (
+		! window.confirm (
+			theTranslator.getText ( 'TravelEditor - This page ask to close; data are perhaps not saved.' )
+		)
+	) {
+		return;
+	}
+	ourOpenTravelInput.click ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateOpenTravelButton
+@desc This method creates the open travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateOpenTravelButton ( ) {
+
+	ourOpenTravelInput = theHTMLElementsFactory.create (
+		'input',
+		{
+			className : 'TravelNotes-TravelUI-OpenFileInput',
+			type : 'file',
+			accept : '.trv'
+		},
+		ourButtonsDiv
+	);
+	ourOpenTravelInput.addEventListener ( 'change', ourOnOpenTravelInputChange, false );
+
+	theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-Button',
+			title : theTranslator.getText ( 'TravelUI - Open travel' ),
+			innerHTML : '&amp;#x1F4C2;' // 1F4C2 = 📂
+		},
+		ourButtonsDiv
+	)
+		.addEventListener ( 'click', ourOnOpenTravelButtonClick, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnImportTravelInputChange
+@desc change event listener for the import travel input element
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnImportTravelInputChange ( changeEvent ) {
+	changeEvent.stopPropagation ( );
+	newFileLoader ( ).mergeLocalFile ( changeEvent );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnImportTravelButtonClick
+@desc click event listener for the import travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnImportTravelButtonClick ( ) {
+	if ( INVALID_OBJ_ID === theTravelNotesData.editedRouteObjId ) {
+		ourImportTravelInput.click ( );
+	}
+	else {
+		theErrorsUI.showError (
+			theTranslator.getText ( 'TravelUI - Not possible to merge a travel when a route is edited' )
+		);
+	}
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateImportTravelButton
+@desc This method creates the import travel button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateImportTravelButton ( ) {
+	ourImportTravelInput = theHTMLElementsFactory.create (
+		'input',
+		{
+			className : 'TravelNotes-TravelUI-OpenFileInput',
+			type : 'file',
+			accept : '.trv,.map'
+		},
+		ourButtonsDiv
+	);
+	ourImportTravelInput.addEventListener ( 'change', ourOnImportTravelInputChange, false );
+	theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-Button',
+			title : theTranslator.getText ( 'TravelUI - Import travel' ),
+			innerHTML : '&amp;#x1F30F;' // 1F30F = 🌏
+		},
+		ourButtonsDiv
+	)
+		.addEventListener ( 'click', ourOnImportTravelButtonClick, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateRoadbookButton
+@desc This method creates the roadbook button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateRoadbookButton ( ) {
+	theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-Button',
+			title : theTranslator.getText ( 'TravelUI - Open travel roadbook' ),
+			innerHTML :
+				'&lt;a class="TravelNotes-UI-LinkButton" href="TravelNotesRoadbook.html?lng=' +
+				theConfig.language +
+				'&amp;page=' +
+				theTravelNotesData.UUID +
+				'" target="_blank">&amp;#x1F4CB;&lt;/a>' // 1F4CB = 📋
+		},
+		ourButtonsDiv
+	);
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateButtonsDiv
+@desc This method creates the buttons div
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateButtonsDiv ( ) {
+	ourButtonsDiv = theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-FlexRowDiv'
+		},
+		ourUIMainDiv
+	);
+
+	ourCreateCancelTravelButton ( );
+	ourCreateSaveTravelButton ( );
+	ourCreateOpenTravelButton ( );
+	ourCreateImportTravelButton ( );
+	ourCreateRoadbookButton ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnExpandRoutesButtonClick
+@desc click event listener for the expand routes list button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnExpandRoutesButtonClick ( clickEvent ) {
+	clickEvent.stopPropagation ( );
+	ourRoutesList.classList.toggle ( 'TravelNotes-TravelUI-HiddenRouteList' );
+	let hiddenList = ourRoutesList.classList.contains ( 'TravelNotes-TravelUI-HiddenRouteList' );
+	clickEvent.target.innerHTML =
+		hiddenList ? '&amp;#x25b6;' : '&amp;#x25bc;'; // 25b6 = ▶  25bc = ▼
+	clickEvent.target.title =
+		hiddenList
+			?
+			theTranslator.getText ( 'TravelUI - Show' )
+			:
+			theTranslator.getText ( 'TravelUI - Hide' );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateExpandRoutesButton
+@desc This method creates the expand routes list button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateExpandRoutesButton ( ) {
+	theHTMLElementsFactory.create (
+		'div',
+		{
+			innerHTML : '&amp;#x25bc;', // 25bc = ▼
+			className : 'TravelNotes-TravelUI-RouteList-ExpandButton'
+		},
+		ourRoutesHeaderDiv
+	)
+		.addEventListener ( 'click', ourOnExpandRoutesButtonClick, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnExpandRoutesButtonClick
+@desc click event listener for the add route button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnAddRouteButtonClick ( clickEvent ) {
+	clickEvent.stopPropagation ( );
+	theRouteEditor.addRoute ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateAddRouteButton
+@desc This method creates the add route button
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateAddRouteButton ( ) {
+	theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-Button TravelNotes-UI-FlexRow-RightButton',
+			title : theTranslator.getText ( 'TravelUI - Add a route' ),
+			innerHTML : '+'
+		},
+		ourRoutesHeaderDiv
+	)
+		.addEventListener ( 'click', ourOnAddRouteButtonClick, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateRoutesListHeaderDiv
+@desc This method creates the routes list header div
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateRoutesListHeaderDiv ( ) {
+	ourRoutesHeaderDiv = theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-UI-FlexRowDiv'
+		},
+		ourUIMainDiv
+	);
+	ourCreateExpandRoutesButton ( ourRoutesHeaderDiv );
+	theHTMLElementsFactory.create (
+		'span',
+		{
+			innerHTML : theTranslator.getText ( 'TravelUI - Travel routes' )
+		},
+		ourRoutesHeaderDiv
+	);
+	ourCreateAddRouteButton ( ourRoutesHeaderDiv );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRouteDragStart
+@desc dragstart event listener for a route dragged in the route list
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRouteDragStart ( dragEvent ) {
+	dragEvent.stopPropagation ( );
+	try {
+		dragEvent.dataTransfer.setData ( 'Text', dragEvent.target.objId );
+		dragEvent.dataTransfer.dropEffect = 'move';
+		dragEvent.dataTransfer.routeObjId = dragEvent.target.objId;
+	}
+	catch ( err ) {
+		console.log ( err );
+	}
+	ourDraggedRouteObjId = dragEvent.target.objId;
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRouteListDragOver
+@desc dragover event listener for the route list element
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRouteListDragOver ( dragEvent ) {
+	dragEvent.preventDefault ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRouteDrop
+@desc drop event listener for a route dragged in the route list element
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRouteDrop ( dropEvent ) {
+	dropEvent.preventDefault ( );
+	let element = dropEvent.target;
+	while ( ! element.objId ) {
+		element = element.parentElement;
+	}
+	let clientRect = element.getBoundingClientRect ( );
+	theTravelEditor.routeDropped (
+		ourDraggedRouteObjId,
+		element.objId,
+		( dropEvent.clientY - clientRect.top &lt; clientRect.bottom - dropEvent.clientY )
+	);
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourCreateRoutesListHeaderDiv
+@desc This method creates the routes list header div
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourCreateRouteListDiv ( ) {
+	ourRoutesList = theHTMLElementsFactory.create (
+		'div',
+		{
+			className : 'TravelNotes-TravelUI-RoutesListDiv'
+		},
+		ourUIMainDiv
+	);
+	ourRoutesList.addEventListener ( 'drop', ourOnRouteDrop, false );
+	ourRoutesList.addEventListener ( 'dragover', ourOnRouteListDragOver, false );
+	ourRoutesList.addEventListener ( 'wheel', ourOnRouteListWheel, false );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRouteContextMenu
+@desc context menu event listener for a route
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRouteContextMenu ( contextMenuEvent ) {
+	contextMenuEvent.stopPropagation ( );
+	contextMenuEvent.preventDefault ( );
+	contextMenuEvent.latlng = { lat : LAT_LNG.defaultValue, lng : LAT_LNG.defaultValue };
+	contextMenuEvent.fromUI = true;
+	contextMenuEvent.originalEvent =
+		{
+			clientX : contextMenuEvent.clientX,
+			clientY : contextMenuEvent.clientY
+		};
+	newRouteContextMenu ( contextMenuEvent, ourUIMainDiv ).show ( );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class
+@classdesc This class is the Travel part of the UI
+@see {@link theTravelUI} for the one and only one instance of this class
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+class TravelUI {
+
+	/**
+	creates the user interface
+	@param {HTMLElement} uiMainDiv The HTML element in witch the different elements of the UI have to be created
+	*/
+
+	createUI ( uiMainDiv ) {
+		if ( ourUIMainDiv ) {
+			return;
+		}
+		ourUIMainDiv = uiMainDiv;
+		ourCreateTravelNameDiv ( );
+		ourCreateButtonsDiv ( );
+		ourCreateRoutesListHeaderDiv ( );
+		ourCreateRouteListDiv ( );
+	}
+
+	/**
+	Removes all routes from the routes list and add the routes that are in the TravelNotesData.travel object
+	*/
+
+	setRoutesList ( ) {
+		while ( ourRoutesList.firstChild ) {
+			ourRoutesList.firstChild.removeEventListener ( 'dragstart', ourOnRouteDragStart, false );
+			ourRoutesList.firstChild.removeEventListener ( 'contextmenu', ourOnRouteContextMenu, false );
+			ourRoutesList.removeChild ( ourRoutesList.firstChild );
+		}
+
+		let routesIterator = theTravelNotesData.travel.routes.iterator;
+		while ( ! routesIterator.done ) {
+			let route = routesIterator.value.objId === theTravelNotesData.editedRouteObjId
+				?
+				theTravelNotesData.travel.editedRoute
+				:
+				routesIterator.value;
+			let routeName =
+				( routesIterator.value.objId === theTravelNotesData.editedRouteObjId ? '&amp;#x1f534;&amp;nbsp;' : '' ) +
+				( route.chain ? '&amp;#x26d3;&amp;nbsp;' : '' ) +
+				( route.computedName ); // 1f534 = 🔴 26d3 = ⛓
+
+			let routeDiv = theHTMLElementsFactory.create (
+				'div',
+				{
+					draggable : true,
+					className :
+						'TravelNotes-TravelUI-RoutesList-Item TravelNotes-UI-MoveCursor' +
+						( routesIterator.value.hidden ? ' TravelNotes-TravelUI-RoutesList-HiddenItem' : '' ),
+					objId :
+						routesIterator.value.objId === theTravelNotesData.editedRouteObjId
+							?
+							theTravelNotesData.travel.editedRoute.objId
+							:
+							routesIterator.value.objId,
+					canDrag : true,
+					innerHTML : routeName
+				},
+				ourRoutesList
+			);
+
+			routeDiv.addEventListener ( 'dragstart', ourOnRouteDragStart, false );
+			routeDiv.addEventListener ( 'contextmenu', ourOnRouteContextMenu, false );
+		}
+	}
+
+	/**
+	Set the travel name in the travel name input
+	*/
+
+	setTravelName ( ) {
+		ourTravelNameInput.value = theTravelNotesData.travel.name;
+	}
+}
+
+const ourTravelUI = Object.freeze ( new TravelUI );
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@desc The one and only one instance of TravelUI class
+	@type {TravelUI}
+	@constant
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourTravelUI as theTravelUI
+};
+
+/*
+--- End of TravelUI.js file -------------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:02 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

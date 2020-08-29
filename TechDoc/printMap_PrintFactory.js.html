@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: printMap/PrintFactory.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: printMap/PrintFactory.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2020 - wwwouaiebe - Contact: http//www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/*
+--- printFactory.js file ----------------------------------------------------------------------------------------------
+This file contains:
+	-
+Changes:
+	- v1.9.0:
+		- created
+	- v1.10.0
+		- Issue #106 : Profiles are not hidden when printing the route maps
+	- v1.12.0:
+		- Issue #120 : Review the UserInterface
+Doc reviewed 20200508
+Tests ...
+
+-----------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file PrintFactory.js
+@copyright Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module PrintFactory
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/* global L */
+
+import { theErrorsUI } from '../UI/ErrorsUI.js';
+import { theHTMLElementsFactory } from '../util/HTMLElementsFactory.js';
+import { theTravelNotesData } from '../data/TravelNotesData.js';
+import { theDataSearchEngine } from '../data/DataSearchEngine.js';
+import { theGeometry } from '../util/Geometry.js';
+import { theConfig } from '../data/Config.js';
+import { theTranslator } from '../UI/Translator.js';
+import { theLayersToolbarUI } from '../UI/LayersToolbarUI.js';
+import { theAPIKeysManager } from '../core/APIKeysManager.js';
+import { ZERO, ONE, TWO } from '../util/Constants.js';
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourNewPrintFactory
+@desc constructor for PrintFactory objects
+@return {PrintFactory} an instance of PrintFactory object
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourNewPrintFactory ( ) {
+
+	const LAT = ZERO;
+	const LNG = ONE;
+
+	let myPrintData = null;
+	let myRoute = null;
+	let myPrintSize = null;
+	let myViews = [];
+	let myViewCounter = 0;
+	let myRoutePolyline = null;
+	let myBody = document.querySelector ( 'body' );
+	let myTilesPage = 0;
+
+	/*
+	--- myOnAfterPrint function -----------------------------------------------------------------------------------------
+
+	This function restore the map after printing
+
+	-------------------------------------------------------------------------------------------------------------------
+	*/
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnAfterPrint
+	@desc remove the print views and restore the map and user interface after printing
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnAfterPrint ( ) {
+		while ( ZERO &lt; document.getElementsByClassName ( 'TravelNotes-routeViewDiv' ).length ) {
+			myBody.removeChild ( document.getElementsByClassName ( 'TravelNotes-routeViewDiv' ) [ ZERO ] );
+		}
+		document.getElementById ( 'TravelNotes-PrintToolbar-PrintButton' )
+			.removeEventListener (	'click', ( ) => window.print ( ), false );
+		document.getElementById ( 'TravelNotes-PrintToolbar-CancelButton' )
+			.removeEventListener (	'click', myOnAfterPrint, false );
+		myBody.removeChild ( document.getElementById ( 'TravelNotes-PrintToolbar' ) );
+
+		let childrens = myBody.children;
+		for ( let counter = 0; counter &lt; childrens.length; counter ++ ) {
+			childrens.item ( counter ).classList.remove ( 'TravelNotes-PrintViews-Hidden' );
+		}
+		theTravelNotesData.map.invalidateSize ( false );
+		window.removeEventListener ( 'afterprint', myOnAfterPrint, true );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myComputePrintSize
+	@desc compute the print size in lat and lng transforming the dimension given in mm by the user.
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myComputePrintSize ( ) {
+
+		let body = document.querySelector ( 'body' );
+		let dummyDiv = theHTMLElementsFactory.create ( 'div', { }, body );
+		dummyDiv.setAttribute (
+			'style',
+			'position:absolute;top:0,left:0;width:' +
+				( myPrintData.paperWidth - ( TWO * myPrintData.borderWidth ) ) +
+				'mm;height:' +
+				( myPrintData.paperHeight - ( TWO * myPrintData.borderWidth ) ) +
+				'mm;'
+		);
+		const TILE_SIZE = 256;
+		myTilesPage = Math.ceil ( dummyDiv.clientWidth / TILE_SIZE ) * Math.ceil ( dummyDiv.clientHeight / TILE_SIZE );
+		let topLeftScreen = theGeometry.screenCoordToLatLng ( ZERO, ZERO );
+		let bottomRightScreen = theGeometry.screenCoordToLatLng (
+			dummyDiv.clientWidth,
+			dummyDiv.clientHeight
+		);
+		body.removeChild ( dummyDiv );
+
+		let scale = theTravelNotesData.map.getZoomScale ( theTravelNotesData.map.getZoom ( ), myPrintData.zoomFactor );
+		myPrintSize = [
+			Math.abs ( topLeftScreen [ LAT ] - bottomRightScreen [ LAT ] ) * scale,
+			Math.abs ( topLeftScreen [ LNG ] - bottomRightScreen [ LNG ] ) * scale
+		];
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myIsFirstPointOnView
+	@desc test if firstItineraryPoint is on the frame of currentView
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myIsFirstPointOnView ( currentView, firstItineraryPoint ) {
+		const tolerance = 0.000001;
+		if (
+			firstItineraryPoint.lat - currentView.bottomLeft.lat &lt; tolerance
+			||
+			currentView.upperRight.lat - firstItineraryPoint.lat &lt; tolerance
+			||
+			firstItineraryPoint.lng - currentView.bottomLeft.lng &lt; tolerance
+			||
+			currentView.upperRight.lng - firstItineraryPoint.lng &lt; tolerance
+		) {
+
+			// itinerary point is really near the frame. we consider the itinerary point as intermediate point
+			return { lat : firstItineraryPoint.lat, lng : firstItineraryPoint.lng };
+		}
+		return null;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myIsItineraryHorOrVer
+	@desc compute if the line defined by firstItineraryPoint  lastItineraryPoint
+	is horizontal or vertical. If yes, the intersection of the line and currentView is returned
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myIsItineraryHorOrVer ( currentView, firstItineraryPoint, lastItineraryPoint ) {
+		if ( firstItineraryPoint.lng === lastItineraryPoint.lng ) {
+
+			// Itinerary is vertical
+			return {
+				lat : firstItineraryPoint.lat > lastItineraryPoint.lat
+					?
+					currentView.bottomLeft.lat : currentView.upperRight.lat,
+				lng : firstItineraryPoint.lng
+			};
+		}
+		if ( firstItineraryPoint.lat === lastItineraryPoint.lat ) {
+
+			// Itinerary is horizontal
+			return {
+				lat : firstItineraryPoint.lat,
+				lng : firstItineraryPoint.lng &lt; lastItineraryPoint.lng
+					?
+					currentView.upperRight.lng : currentView.bottomLeft.lng
+			};
+		}
+		return null;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myHaveViewOnlyOnePoint
+	@desc test if currentView is only a point. If yes an intermediatePoint is computed
+	to extend the view to the maximun possible
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myHaveViewOnlyOnePoint ( currentView, firstItineraryPoint, lastItineraryPoint ) {
+		if (
+			currentView.bottomLeft.lat === currentView.upperRight.lat
+			&amp;&amp;
+			currentView.bottomLeft.lng === currentView.upperRight.lng
+		) {
+			let coef = Math.min (
+				Math.abs ( myPrintSize [ LAT ] / ( lastItineraryPoint.lat - firstItineraryPoint.lat ) ),
+				Math.abs ( myPrintSize [ LNG ] / ( lastItineraryPoint.lng - firstItineraryPoint.lng ) )
+			);
+			return {
+				lat : firstItineraryPoint.lat + ( coef * ( lastItineraryPoint.lat - firstItineraryPoint.lat ) ),
+				lng : firstItineraryPoint.lng + ( coef * ( lastItineraryPoint.lng - firstItineraryPoint.lng ) )
+			};
+		}
+		return null;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myComputeIntermediatePoint
+	@desc See comments in the code
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myComputeIntermediatePoint ( currentView, firstItineraryPoint, lastItineraryPoint ) {
+
+		/*
+		we have to find the intersection of the line segment 'firstItineraryPoint -> lastItineraryPoint' with
+		the rectangle defined by currentView.lowerLeft, currentView.upperRight.
+		We know also that firstItineraryPoint is inside currentView
+		but perhaps on the frame and that lastItineraryPoint is outside the frame so the intersection is
+		always between firstItineraryPoint and lastItineraryPoint
+
+		Equation of the a line :
+			y = coefA * x + coefB
+			or
+			x = ( y - coefB ) / coefA
+
+		So we have :
+
+			firstItineraryPoint.lat = coefA * firstItineraryPoint.lng + coefB
+			and
+			lastItineraryPoint.lat = coefA * lastItineraryPoint.lng + coefB
+
+		and after some transformations:
+			coefA = ( firstItineraryPoint.lat - lastItineraryPoint.lat ) / ( firstItineraryPoint.lng - lastItineraryPoint.lng )
+			coefB = firstItineraryPoint.lat - ( coefA * firstItineraryPoint.lng )
+
+		Notice: we have some computing problems when
+		- currentView.lowerLeft === currentView.upperRight. We cannot find an intersection and we have to compute a
+		intermediatePoint outside the currentView
+		- firstItineraryPoint is on the frame (or really near the frame ) of currentView -> the intersection
+		is the firstItineraryPoint
+		- the line segment 'firstItineraryPoint -> lastItineraryPoint' is horizontal or vertical
+		(we have to divide by 0)
+
+		So we test first the 3 problems and then we compute the intersection if needed
+		*/
+
+		let intermediatePoint = myHaveViewOnlyOnePoint ( currentView, firstItineraryPoint, lastItineraryPoint );
+		if ( intermediatePoint ) {
+			return intermediatePoint;
+		}
+
+		intermediatePoint = myIsFirstPointOnView ( currentView, firstItineraryPoint );
+		if ( intermediatePoint ) {
+			return intermediatePoint;
+		}
+
+		intermediatePoint = myIsItineraryHorOrVer ( currentView, firstItineraryPoint, lastItineraryPoint );
+		if ( intermediatePoint ) {
+			return intermediatePoint;
+		}
+
+		let coefA = ( firstItineraryPoint.lat - lastItineraryPoint.lat ) / ( firstItineraryPoint.lng - lastItineraryPoint.lng );
+		let coefB = firstItineraryPoint.lat - ( coefA * firstItineraryPoint.lng );
+
+		// Searching intersection with the right side of currentView
+		intermediatePoint = {
+			lat : ( coefA * currentView.upperRight.lng ) + coefB,
+			lng : currentView.upperRight.lng
+		};
+
+		if (
+			intermediatePoint.lat &lt;= currentView.upperRight.lat
+				&amp;&amp;
+				intermediatePoint.lat >= currentView.bottomLeft.lat
+				&amp;&amp;
+				intermediatePoint.lng &lt; lastItineraryPoint.lng
+		) {
+			return intermediatePoint;
+		}
+
+		// Searching intersection with the top side of currentView
+		intermediatePoint = {
+			lat : currentView.upperRight.lat,
+			lng : ( currentView.upperRight.lat - coefB ) / coefA
+		};
+
+		if (
+			intermediatePoint.lng >= currentView.bottomLeft.lng
+				&amp;&amp;
+				intermediatePoint.lng &lt;= currentView.upperRight.lng
+				&amp;&amp;
+				intermediatePoint.lat &lt; lastItineraryPoint.lat
+		) {
+			return intermediatePoint;
+		}
+
+		// Searching intersection with the left side of currentView
+		intermediatePoint = {
+			lat : ( coefA * currentView.bottomLeft.lng ) + coefB,
+			lng : currentView.bottomLeft.lng
+		};
+
+		if (
+			intermediatePoint.lat &lt;= currentView.upperRight.lat
+				&amp;&amp;
+				intermediatePoint.lat >= currentView.bottomLeft.lat
+				&amp;&amp;
+				intermediatePoint.lng > lastItineraryPoint.lng
+		) {
+			return intermediatePoint;
+		}
+
+		// Searching intersection with the bottom side of currentView
+		intermediatePoint = {
+			lat : currentView.bottomLeft.lat,
+			lng : ( currentView.bottomLeft.lat - coefB ) / coefA
+		};
+
+		if (
+			intermediatePoint.lng >= currentView.bottomLeft.lng
+				&amp;&amp;
+				intermediatePoint.lng &lt;= currentView.upperRight.lng
+				&amp;&amp;
+				intermediatePoint.lat > lastItineraryPoint.lat
+		) {
+			return intermediatePoint;
+		}
+		throw new Error ( 'intermediate point not found' );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myComputeViews
+	@desc compute the different views needed to print the maps
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myComputeViews ( ) {
+
+		myViews = [];
+
+		// Iteration on the route
+		let itineraryPointsIterator = myRoute.itinerary.itineraryPoints.iterator;
+		let done = itineraryPointsIterator.done;
+
+		// First view is created with the first point
+		let currentView = {
+			bottomLeft : { lat : itineraryPointsIterator.value.lat, lng : itineraryPointsIterator.value.lng },
+			upperRight : { lat : itineraryPointsIterator.value.lat, lng : itineraryPointsIterator.value.lng }
+		};
+		let entryPoint = { lat : itineraryPointsIterator.value.lat, lng : itineraryPointsIterator.value.lng };
+		let previousItineraryPoint = itineraryPointsIterator.value;
+
+		// we go to the next point
+		done = itineraryPointsIterator.done;
+		let currentItineraryPoint = itineraryPointsIterator.value;
+		while ( ! done ) {
+
+			// a temporary view is created, extending the current view with the current itinerary point
+			let tmpView = {
+				bottomLeft : {
+					lat : Math.min ( currentView.bottomLeft.lat, currentItineraryPoint.lat ),
+					lng : Math.min ( currentView.bottomLeft.lng, currentItineraryPoint.lng )
+				},
+				upperRight : {
+					lat : Math.max ( currentView.upperRight.lat, currentItineraryPoint.lat ),
+					lng : Math.max ( currentView.upperRight.lng, currentItineraryPoint.lng )
+				}
+			};
+
+			// computing the temporary view size...
+			let tmpViewSize = [
+				tmpView.upperRight.lat - tmpView.bottomLeft.lat,
+				tmpView.upperRight.lng - tmpView.bottomLeft.lng
+			];
+
+			// and comparing with the desired max view size
+			if ( myPrintSize [ LAT ] > tmpViewSize [ LAT ] &amp;&amp; myPrintSize [ LNG ] > tmpViewSize [ LNG ] ) {
+
+				// the current itineraryPoint is inside the temporary view.
+				// the temporary view becomes the current view and we go to the next itinerary point
+				currentView = tmpView;
+				previousItineraryPoint = itineraryPointsIterator.value;
+				done = itineraryPointsIterator.done;
+				currentItineraryPoint = itineraryPointsIterator.value;
+				if ( done ) {
+					currentView.entryPoint = entryPoint;
+					currentView.exitPoint = previousItineraryPoint;
+					myViews.push ( currentView );
+				}
+			}
+			else {
+
+				// the itineraryPoint is outside the view. We have to compute an intermediate
+				// point (where the route intersect with the max size view).
+				previousItineraryPoint = myComputeIntermediatePoint (
+					currentView,
+					previousItineraryPoint,
+					currentItineraryPoint
+				);
+
+				// The view is extended to the intermediate point
+				currentView.bottomLeft = {
+					lat : Math.min ( currentView.bottomLeft.lat, previousItineraryPoint.lat ),
+					lng : Math.min ( currentView.bottomLeft.lng, previousItineraryPoint.lng )
+				};
+				currentView.upperRight = {
+					lat : Math.max ( currentView.upperRight.lat, previousItineraryPoint.lat ),
+					lng : Math.max ( currentView.upperRight.lng, previousItineraryPoint.lng )
+				};
+
+				// entry point and exit point are computed and added to the view
+				currentView.entryPoint = entryPoint;
+				currentView.exitPoint = previousItineraryPoint;
+
+				// and the view added to the list view
+				myViews.push ( currentView );
+
+				// and a new view is created
+				currentView = {
+					bottomLeft : { lat : previousItineraryPoint.lat, lng : previousItineraryPoint.lng },
+					upperRight : { lat : previousItineraryPoint.lat, lng : previousItineraryPoint.lng }
+				};
+				entryPoint = { lat : previousItineraryPoint.lat, lng : previousItineraryPoint.lng };
+			}
+			if ( theConfig.printRouteMap.maxTiles &lt; myViews.length * myTilesPage ) {
+
+				// verifying that we don't have to mutch views
+				done = true;
+			}
+		} // end of while ( ! done )
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myGetLayer
+	@desc creates a leaflet layer with the same map that the main map
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myGetLayer ( ) {
+		let layer = theLayersToolbarUI.getLayer ( theTravelNotesData.travel.layerName );
+		let url = layer.url;
+		if ( layer.providerKeyNeeded ) {
+			let providerKey = theAPIKeysManager.getKey ( layer.providerName.toLowerCase ( ) );
+			url = url.replace ( '{providerKey}', providerKey );
+		}
+		let leafletLayer = null;
+		if ( 'wmts' === layer.service.toLowerCase ( ) ) {
+			leafletLayer = L.tileLayer ( url );
+		}
+		else {
+			leafletLayer = L.tileLayer.wms ( url, layer.wmsOptions );
+		}
+
+		leafletLayer.options.attribution =
+			' &amp;copy; &lt;a href="http://www.openstreetmap.org/copyright" target="_blank" ' +
+			'title="OpenStreetMap contributors">OpenStreetMap contributors&lt;/a> ' +
+			layer.attribution +
+			'| &amp;copy; &lt;a href="https://github.com/wwwouaiebe" target="_blank" ' +
+			'title="https://github.com/wwwouaiebe">Travel &amp; Notes&lt;/a> ';
+
+		return leafletLayer;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myGetNotesMarkers
+	@desc creates markers for notes
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myGetNotesMarkers ( ) {
+		let notesMarkers = [];
+		myRoute.notes.forEach (
+			note => {
+				let icon = L.divIcon (
+					{
+						iconSize : [ note.iconWidth, note.iconHeight ],
+						iconAnchor : [ note.iconWidth / TWO, note.iconHeight / TWO ],
+						popupAnchor : [ ZERO, -note.iconHeight / TWO ],
+						html : note.iconContent,
+						className : 'TravelNotes-AllNotes ' + theConfig.note.style
+					}
+				);
+
+				const NOTE_Z_INDEX_OFFSET = 100;
+				let marker = L.marker (
+					note.iconLatLng,
+					{
+						zIndexOffset : NOTE_Z_INDEX_OFFSET,
+						icon : icon,
+						draggable : true
+					}
+				);
+				notesMarkers.push ( marker );
+			}
+		);
+		return notesMarkers;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myPrintView
+	@desc creates a print view
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myPrintView ( view ) {
+		myViewCounter ++;
+		let viewId = 'TravelNotes-RouteViewDiv' + myViewCounter;
+		let viewDiv = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-routeViewDiv',
+				id : viewId
+			},
+			myBody
+		);
+
+		if ( myPrintData.pageBreak ) {
+			viewDiv.classList.add ( 'TravelNotes-PrintPageBreak' );
+		}
+
+		// setting the size given by theuser in mm
+		viewDiv.setAttribute (
+			'style',
+			'width:' +
+				myPrintData.paperWidth +
+				'mm;height:' +
+				myPrintData.paperHeight +
+				'mm;'
+		);
+
+		// creating markers for notes
+		let layers = myPrintData.printNotes ? myGetNotesMarkers ( ) : [];
+
+		// adding the leaflet map layer
+		layers.push ( myGetLayer ( ) );
+
+		// adding entry point and exit point markers
+		layers.push (
+			L.circleMarker (
+				[ view.entryPoint.lat, view.entryPoint.lng ],
+				theConfig.printRouteMap.entryPointMarker
+			)
+		);
+		layers.push (
+			L.circleMarker (
+				[ view.exitPoint.lat, view.exitPoint.lng ],
+				theConfig.printRouteMap.exitPointMarker
+			)
+		);
+
+		// adding the route
+		layers.push ( myRoutePolyline );
+
+		// creating the map
+		L.map (
+			viewId,
+			{
+				attributionControl : true,
+				zoomControl : false,
+				center : [
+					( view.bottomLeft.lat + view.upperRight.lat ) / TWO,
+					( view.bottomLeft.lng + view.upperRight.lng ) / TWO
+				],
+				zoom : myPrintData.zoomFactor,
+				minZoom : myPrintData.zoomFactor,
+				maxZoom : myPrintData.zoomFactor,
+				layers : layers
+			}
+		);
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateToolbar
+	@desc creates the toolbar with the print and cancel button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateToolbar ( ) {
+		let printToolbar = theHTMLElementsFactory.create (
+			'div',
+			{
+				id : 'TravelNotes-PrintToolbar'
+			},
+			myBody
+		);
+		theHTMLElementsFactory.create (
+			'div',
+			{
+				id : 'TravelNotes-PrintToolbar-PrintButton',
+				className : 'TravelNotes-UI-Button',
+				title : theTranslator.getText ( 'PrintFactory - Print' ),
+				innerHTML : '&amp;#x1F5A8;&amp;#xFE0F;'
+			},
+			printToolbar
+		)
+			.addEventListener (	'click', ( ) => window.print ( ), false );
+		theHTMLElementsFactory.create (
+			'div',
+			{
+				id : 'TravelNotes-PrintToolbar-CancelButton',
+				className : 'TravelNotes-UI-Button',
+				title : theTranslator.getText ( 'PrintFactory - Cancel print' ),
+				innerHTML : '&amp;#x274c;'
+			},
+			printToolbar
+		)
+			.addEventListener (	'click', myOnAfterPrint, false );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myPrintViews
+	@desc add the print views to the html page
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myPrintViews ( ) {
+
+		// adding classes to the body
+
+		let childrens = myBody.children;
+		for ( let counter = 0; counter &lt; childrens.length; counter ++ ) {
+			childrens.item ( counter ).classList.add ( 'TravelNotes-PrintViews-Hidden' );
+		}
+
+		myCreateToolbar ( );
+
+		window.addEventListener ( 'afterprint', myOnAfterPrint, true );
+
+		// creating the polyline for the route
+		// why we can create the polyline only once and we have to create markers and layers for each view?
+		let latLng = [];
+		let pointsIterator = myRoute.itinerary.itineraryPoints.iterator;
+		while ( ! pointsIterator.done ) {
+			latLng.push ( pointsIterator.value.latLng );
+		}
+		myRoutePolyline = L.polyline (
+			latLng,
+			{
+				color : myRoute.color,
+				weight : myRoute.width
+			}
+		);
+
+		// adding views
+		myViewCounter = ZERO;
+		myViews.forEach ( myPrintView );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@class PrintFactory
+	@classdesc This class manages the print of a route
+	@see {@link newPrintFactory} for constructor
+	@hideconstructor
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	class PrintFactory {
+
+		/**
+		Hide the map and user interface, prepares the print views and add a toolbar on top of the screen
+		@param {PrintRouteMapOptions} printData the print options returned by the PrintRouteMapDialog
+		@param {!number} routeObjId The objId of the route to print
+		*/
+
+		print ( printData, routeObjId ) {
+			myRoute = theDataSearchEngine.getRoute ( routeObjId );
+			if ( ! myRoute ) {
+				return;
+			}
+			myPrintData = printData;
+			myComputePrintSize ( );
+			myComputeViews ( );
+
+			/*
+			// Remain for debugging
+			myViews.forEach (
+				view => L.rectangle ( [ view.bottomLeft, view.upperRight ] ).addTo ( theTravelNotesData.map )
+			);
+			console.log ( 'views :' + myViews.length );
+			*/
+
+			if ( theConfig.printRouteMap.maxTiles &lt; myViews.length * myTilesPage ) {
+				theErrorsUI.showError ( theTranslator.getText ( 'PrintFactory - The maximum of allowed pages is reached.' ) );
+				return;
+			}
+			myPrintViews ( );
+		}
+	}
+
+	return Object.freeze ( new PrintFactory );
+}
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function newPrintFactory
+	@desc constructor for PrintFactory objects
+	@return {PrintFactory} an instance of FileLoader object
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourNewPrintFactory as newPrintFactory
+};
+
+/*
+--- End of PrintFactory.js file -----------------------------------------------------------------------------------------------
+
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:02 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Tutorial: GuideUtilisateurFR</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Tutorial: GuideUtilisateurFR</h1>
+
+    <section>
+
+<header>
+    
+
+    <h2>GuideUtilisateurFR</h2>
+</header>
+
+<article>
+    <h1>Travel &amp; Notes - Guide de l'utilisateur</h1>
+<ul>
+<li><a href="#WhyTravelNotes">Pourquoi Travel &amp; Notes</a></li>
+<li><a href="#SomeExplanations">Quelques explications sur les termes utilisés</a></li>
+<li><a href="#BeforeStart">Avant de commencer à utiliser Travel &amp; Notes</a>
+<ul>
+<li><a href="#APIKeys">Comment introduire vos clefs d'accès dans Travel &amp; Notes</a></li>
+</ul>
+</li>
+<li>[Menus contextuels](#ContextMenus]</li>
+<li><a href="#Interface1">Interface</a>
+<ul>
+<li><a href="#InterfaceToolbar">Barre d'outils en haut de l'interface</a></li>
+<li><a href="#Travel">Voyage</a>
+<ul>
+<li><a href="#TravelName">Nom du voyage</a></li>
+<li><a href="#RouteToolbar">Boutons de la barre d'outils &quot;Trajets du voyage&quot;</a></li>
+<li><a href="#RoutesTravel">Trajets du voyage</a></li>
+</ul>
+</li>
+<li><a href="#ItineraryAndNotes">Itinéraire et notes</a></li>
+<li><a href="#RouterButtons">Barre d'outils des modes de parcours et des fournisseurs d'itinéraire</a></li>
+</ul>
+</li>
+<li><a href="#EditBoxes">Boites d'édition</a></li>
+<li><a href="#Routes">Trajets et points de passage</a>
+<ul>
+<li><a href="#AddWayPoint">Créer un point de passage</a></li>
+<li><a href="#AddWayPointDragDrop">Ajouter un point de passage avec un glisser/déposer </a></li>
+<li><a href="#ModifyWayPoint">Modifier un point de passage </a></li>
+<li><a href="#DeleteWayPoint">Supprimer un point de passage</a></li>
+<li><a href="#RenameWayPoint">Renommer un point de passage ou changer son adresse</a></li>
+<li><a href="#ItineraryModeAndProvider">Choisir un mode de parcours et un fournisseur d'itinéraire</a></li>
+<li><a href="#ComputingItinerary">Calcul de l'itinéraire</a></li>
+<li><a href="#SaveOrDiscardRoute">Sauver ou abandonner les modifications</a></li>
+<li><a href="#RouteProfile">Profil d'un trajet</a></li>
+<li><a href="#TrainItinerary">Itinéraire en train</a></li>
+<li><a href="#RouteDlg">La boite d'édition des propriétés d'un trajet</a></li>
+<li><a href="#PrintRouteMaps">Imprimer les cartes d'un trajet</a></li>
+</ul>
+</li>
+<li><a href="#Notes1">Notes</a>
+<ul>
+<li><a href="#NewTravelNote">Créer une note de voyage</a></li>
+<li><a href="#ReorderTravelNote">Modifier l'ordre des notes de voyage</a></li>
+<li><a href="#NewRouteNote">Créer une note de trajet</a></li>
+<li><a href="#ViewNote">Consulter une note</a></li>
+<li><a href="#ModifyNote">Modifier le contenu d'une note</a></li>
+<li><a href="#DeleteNote">Effacer une note</a></li>
+<li><a href="#MoveNote">Déplacer l'icône d'une note</a></li>
+<li><a href="#LatLngNote">Modifier la latitude et la longitude d'une note</a></li>
+<li><a href="#RouteToTravelNote">Transformer une note de trajet en note de voyage</a></li>
+<li><a href="#TravelToRouteNote">Transformer une note de voyage en note de trajet</a></li>
+<li><a href="#AllManeuverNotesFromOsm">Créer une note pour chaque manœuvre du trajet</a></li>
+<li><a href="#NoteDlg">La boite d'édition d'une note</a>
+<ul>
+<li><a href="#SvgNoteFromOsm">Note de trajet prédéfinie &quot;Icône SVG depuis OSM&quot;</a></li>
+<li><a href="#NoteSamples">Quelques exemples de notes</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#MapsMenu">Menu des fonds de carte</a></li>
+<li><a href="#Roadbook">Livre de voyage</a></li>
+<li><a href="#PrepareTravel">Préparer un voyage et le consulter depuis internet</a></li>
+<li><a href="#Viewer">Viewer</a></li>
+</ul>
+<p><a id="WhyTravelNotes"></a></p>
+<h2><strong>Pourquoi Travel &amp; Notes</strong></h2>
+<p>Je pars de temps en temps en voyage en vélo pour plusieurs semaines, parfois dans des régions isolées.
+Ce genre de voyage ne s'improvise pas, même si il y a toujours une part d'imprévu.
+Il me fallait un outil pour préparer mon itinéraire à partir de la carte et pouvoir y ajouter des notes.</p>
+<p>Oui, je sais, il y a des tas d'applications qui permettent de faire un itinéraire d'un point à un autre,
+mais aucune ne me donne vraiment satisfaction: je ne cherche pas souvent le trajet le plus
+court - parfois il s'agit même d'un trajet circulaire - et en général on est limité à quelques centaines
+de kilomètres.</p>
+<p>En final , il est aussi important de pouvoir enrégistrer ce qui a été préparé car cela ne se fait pas
+en quelques minutes.Il faut aussi pouvoir imprimer le résultat. Dans certaines région isolées,
+il n'y a pas toujours de réseau mobile ni de possibilité de recharger une batterie.
+Une bonne vieille copie papier est souvent précieuse.</p>
+<p><a id="SomeExplanations"></a></p>
+<h2><strong>Quelques explications sur les termes utilisés</strong></h2>
+<p>Un <strong>trajet</strong> relie deux points. Sur la carte, il est représenté par une polyligne.</p>
+<p>Un <strong>itinéraire</strong> est la description des différents changements de direction nécessaires pour
+parcourir le trajet. Chaque changement de direction est une <strong>manœuvre</strong>.</p>
+<p>Un <strong>voyage</strong> est constitué de un ou plusieurs trajets. Ceux-ci ne doivent pas obligatoirement
+se toucher à leur extrémités. Il peut également y avoir plus de deux trajets partant d'un même point.</p>
+<p>Dans un voyage, certains trajets peuvent être <strong>chainés</strong> entre eux. Dans ce cas les différents
+trajets chainés seront considérés comme n'en faisant qu'un seul pour le calcul des distances.
+Une seule chaine peut-être créée par voyage, mais il n'est pas obligatoire que tous
+les trajets soient inclus dans la chaine.</p>
+<p>Une <strong>note</strong> est un ensemble d'informations qui concerne un point précis sur la carte ou sur un trajet.
+Une note est composée d'une icône, d'un 'tooltip', d'un texte libre, d'une adresse, d'un lien et
+d'un numéro de téléphone. Aucune de ces informations n'est obligatoire, à l'exception de l'icône,
+qui est utilisée pour représenter la note sur la carte. Cette icône peut être une image,
+une photo, un texte...</p>
+<p>Le <strong>livre de voyage</strong> est une page HTML qui regroupe toute l'information du voyage: les notes,
+les trajets et les itinéraires.</p>
+<p><a id="BeforeStart"></a></p>
+<h2><strong>Avant de commencer à utiliser Travel &amp; Notes</strong></h2>
+<p>Si vous utilisez Travel &amp; Notes uniquement pour créer des notes, vous pouvez ignorer toute la partie
+qui concernent les clefs d'accès. Celles-ci ne sont utilisées que pour le calcul des trajets et
+l'affichage de certaines cartes.</p>
+<p>Travel &amp; Notes ne calcule pas lui-même les itinéraires des trajets. Il se connecte chez un fournisseur
+d'itinéraires pour obtenir cet itinéraire. Les différents fournisseurs d'itinéraire qu'il est possible
+d'utiliser actuellement sont GraphHopper, Stadia Maps, Mapbox, OpenRouteService et OSRM.
+Il est également possible de tracer une polyligne entre deux endroits, sans suivre de chemins.
+Un itinéraire en train entre deux gares peut aussi être ajouté, à condition que cet itinéraire
+soit encodé dans Openstreetmap, en respectant les règles des transports publics version 2.</p>
+<p>Pour GraphHopper, Stadia Maps, OpenRouteService et Mapbox il est nécessaire de posséder une clef d'accès ( <strong>API Key</strong> )
+pour se connecter au serveur. Consultez les sites internet de ces différents fournisseurs pour obtenir
+une clef d'accès.</p>
+<p>Pour l' affichage de certaines cartes (Thunderforest, Lantmäteriet - Suède, Mapbox), une clef d'accès
+est également indispensable. Pour d'autres cartes, ce n'est pas nécessaire (OpenStreetMap,
+vue aérienne ESRI, IGN - Belgique, Kartverket - Norvège, Maanmittauslaitos - Finlande).</p>
+<p>Vous devez également lire correctement  les conditions d'utilisation des clefs d'accès et vérifier
+que ce que vous faites avec Travel &amp; Notes correspond à ces conditions d'utilisation.</p>
+<p>Vous êtes également responsable de l'utilisation qui est faite de vos clefs d'accès. N'oubliez pas
+qu'il peut y avoir une facturation qui est faite sur la base de ces clefs d'accès. Ne les donnez pas
+à n'importe qui, ne les laissez pas trainer n'importe où.</p>
+<p><a id="APIKeys"></a></p>
+<h3>Comment introduire vos clefs d'accès dans Travel &amp; Notes</h3>
+<p>Les clefs d'accès sont gérées à partir de la boite de dialogue des clefs d'accès. Pour afficher celle-ci,
+cliquez sur le bouton 🔑 dans la barre d'outil en haut de l'interface.</p>
+<img src="APIKeysDialogFR.PNG" />
+<p>Pour chaque fournisseur de service, vous devez indiquer à gauche le nom de ce fournisseur  et à droite
+la clef d' accès. Les différents noms possibles actuellement sont 'GraphHopper', 'Lantmateriet',
+'Mapbox', 'MapzenValhalla', 'OpenRouteService' et 'Thunderforest' (insensible au majuscules/minuscules).</p>
+<p>Utilisez le bouton + pour ajouter un fournisseur de service et le bouton ❌ à droite pour
+supprimer celui-ci.</p>
+<p>Quand vos clefs d'accès sont introduites, appuyez sur le bouton 🆗 pour terminer.
+Vos clefs sont sauvegardées dans le &quot;sessionStorage&quot; du browser et disponibles jusqu'à la fermeture
+de celui-ci.</p>
+<p>Il est possible de sauvegarder les clefs d'accès dans un fichier, protégé par un mot de passe ou non protégé.</p>
+<p><strong>Attention</strong>: la page doit être servie en HTTPS pour sauvegarder dans un fichier protégé par un mot de passe.</p>
+<p>Le bouton 🔄 permet de recharger le fichier des clefs d'accès depuis le serveur web.</p>
+<p>Le bouton 💾 à <strong>gauche</strong> de la boite de dialogue permet de sauver les clefs d'accès
+dans un fichier protégé par mot de passe. Celui-ci doit contenir au moins 12 caractères dont
+au moins une majuscule, une minuscule, un chiffre et un autre caractère.</p>
+<p>Le bouton 📂 à <strong>gauche</strong> de la boite de dialogue remplace toutes les clefs d'accès de la
+boite de dialogue par le contenu d'un fichier protégé par mot de passe.</p>
+<p>Ces deux boutons ne sont présents que si toutes les conditions pour pouvoir sauvegarder/restaurer les
+clefs avec un mot de passe sont réunies.</p>
+<p>Le bouton 💾 à <strong>droite</strong> de la boite de dialogue permet de sauver les clefs d'accès dans
+un fichier <strong>non protégé</strong> par mot de passe.</p>
+<p>Le bouton 📂 à <strong>droite</strong> de la boite de dialogue remplace toutes les clefs d'accès de la
+boite de dialogue par le contenu d'un fichier <strong>non protégé</strong> par mot de passe.</p>
+<p>Si un fichier protégé par un mot de passe et nommé <strong>APIKeys</strong> est placé dans le même répertoire que
+Travel &amp; Notes sur le serveur, Travel &amp; Notes vous demandera le mot de passe à l'ouverture pour
+pouvoir utiliser les clefs contenues dans ce fichier.</p>
+<p>Pour les geeks et les paranos voyez aussi ,dans le <a href="GuideInstallationFR.md#TravelNotesConfigJson">guide d'installation</a> et dans le fichier
+TravelNotesConfig.json:</p>
+<ul>
+<li>APIKeys.showDialogButton pour afficher ou masquer le bouton 🔑 dans la barre d'outils</li>
+<li>APIKeys.saveToSessionStorage pour sauver ou non les clefs dans le sessionStorage</li>
+<li>APIKeys.showAPIKeysInDialog pour montrer ou masquer les clefs comme un mot de passe dans la boite
+de dialogue</li>
+<li>APIKeys.dialogHaveUnsecureButtons pour afficher ou masquer les boutons 💾
+et 📂 à <strong>droite</strong></li>
+</ul>
+<p>L'ancienne méthode consistant à introduire les clefs d'accès via l'url continue à fonctionner mais sera supprimée
+dans une prochaine version:</p>
+<ul>
+<li>à la fin de l'url de la page web chargeant Travel &amp; Notes, vous devez introduire un ? suivi
+du nom du fournisseur suivi de ProviderKey suivi de = suivi de votre clef d'accès.
+Plsieurs clef d'accès peuvent être introduites simultanément en les séparants par un &amp;.</li>
+</ul>
+<p>Exemple:</p>
+<pre class="prettyprint source"><code>https://www.example.org/TravelNotes/?MapboxProviderKey=votre_clef_accessMapbox&GraphHopperProviderKey=votre_clef_acces_GraphHopper
+</code></pre>
+<p>Dès que Travel &amp; Notes détecte des clefs d'accès dans l'url, celles-ci sont enrégistrées dans
+le <em>sessionStorage</em> et effacée de l'url. Elles ne sont donc plus visibles à l'écran.
+<strong>Cependant, rappelez-vous qu'une personne mal intentionnée peut toujours les retrouver dans
+l'historique du navigateur</strong>, à moins que vous n'utilisiez le mode navigation privée de votre browser.</p>
+<p><a id="ContextMenus"></a></p>
+<h2><strong>Menus contextuels</strong></h2>
+<p>Tous les objets de la carte (points de passage, notes, trajets, carte) ont un menu contextuel. Toutes les commandes relatives à ces
+objets se trouvent dans ces menus contextuels.</p>
+<p>Les mêmes menus se retrouvent dans l'interface utilisateur à droite de l'écran. Un clic droit sur une route dans la liste des
+routes affichera un menu contextuel pour cette route, un clic droit sur une note dans la description de l'itinéraire ou dans la
+liste des notes de voyage affichera un menu contextuel pour cette note et un clic droit sur une manœuvre dans la description de
+l'itinéraire affichera un menu contextuel pour cette manœuvre.</p>
+<p><a id="Interface1"></a></p>
+<h2><strong>Interface</strong></h2>
+<p>Lorsque la carte s'affiche, seul un petit rectangle noir est est visible dans le coin supérieur de la carte:</p>
+<img src="MinInterface.PNG" />
+<p>Déplacez la souris sur ce rectangle pour voir l'interface complète:</p>
+<img src="InterfaceFR.PNG" />
+<p><a id="InterfaceToolbar"></a></p>
+<h3>Barre d'outils en haut de l'interface</h3>
+<p>En haut de l'interface se trouve une première barre d'outils:</p>
+<ul>
+<li>le bouton 🏠 redirige vers votre page d'accueil</li>
+<li>le bouton ? redirige vers
+<a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages/TravelNotesGuides">la page d'aide sur Github</a></li>
+<li>le bouton @ redirige vers une page de contact. Par défaut, c'est
+<a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/issues">la page des issues de Travel &amp; Notes sur Github</a>.
+L'url peut être modifiée via le fichier TravelNotesConfig.json (travelNotesToolbarUI.contactMail)</li>
+<li>le bouton 🔑 affiche la boite de dialogue des clefs d'accès</li>
+<li>le bouton 🌐 active ou désactive la localisation.</li>
+<li>le bouton 📌 affiche l'interface en permanence.</li>
+</ul>
+<p><a id="Travel"></a></p>
+<h3>Voyage</h3>
+<p><a id="TravelName"></a></p>
+<h4>Nom du voyage</h4>
+<p>Dans cette boite d&quot;édition vous pouvez donner un nom au voyage. Ce nom sera par la suite proposé comme nom par défaut
+pour tous les fichiers que vous créerez à partir de ce voyage.</p>
+<p><a id="RouteToolbar"></a></p>
+<h4>Boutons de la barre d'outils &quot;Voyage&quot;</h4>
+<ul>
+<li>le bouton ❌ efface toutes les données du voyage et commence l'édition d'un nouveau voyage.</li>
+<li>le bouton 💾 sauve le voyage en cours d'édition dans un fichier sur votre ordinateur</li>
+<li>le bouton 📂 ouvre un voyage préalablement sauvé dans un fichier</li>
+<li>le bouton 🌏 ouvre un voyage préalablement sauvé dans un fichier et inclut tous les trajets
+et toutes les notes de ce voyage dans le voyage en cours d'édition</li>
+<li>le bouton 📋 ouvre le livre de voyage</li>
+</ul>
+<p><a id="RoutesTravel"></a></p>
+<h4>Trajets du voyage</h4>
+<p>Dans cette partie, les différents trajets du voyage sont affichés.</p>
+<ul>
+<li>les boutons ▶ ou ▼ réduisent ou agrandissent la liste des trajets</li>
+<li>le bouton + ajoute un nouveau trajet au voyage</li>
+</ul>
+<p>Pour chaque trajet, un clic droit sur celui-ci affiche un menu contextuel contenant des commandes
+qui permettent de faires des opérations sur le trajet.</p>
+<p>Il est aussi possible de faire du glisser / déposer pour réordonner les différents trajets.</p>
+<p>Lorsque un trajet est en cours de modification, une icône 🔴 est présente à gauche de celui-ci.
+De même, Lorsque un trajet est chainé, une icône ⛓ est présente à gauche.</p>
+<p>Par défaut, le nom d'un trajet est le nom et l'adresse du point de départ suivi de ⮞ suivi du nom et
+de l'adresse du point d'arrivée. Il est possible de modifier ce nom en sélectionnant la commande
+'Modifier les propriétés de ce trajet' dans le menu contextuel.</p>
+<p><a id="ItineraryAndNotes"></a></p>
+<h3>Itinéraire et notes</h3>
+<p>Cette partie comprend les manœuvres de l'itinéraire ainsi que les notes liées au trajet.
+Vous pouvez choisir ce que vous désirez voir en cochant les notes et / ou les manœuvres</p>
+<p>Lorsque la souris est placée sur une ligne de l'itinéraire, un marqueur est affiché à cet endroit sur
+la carte.</p>
+<p>Un clic droit sur une ligne de l'itinéraire affichera un menu contextuel affichant des commandes
+qui permettent de faires des opérations sur la manœuvre ou la note.</p>
+<p><a id="RouterButtons"></a></p>
+<h3>Barre d'outils des modes de parcours et des fournisseurs d'itinéraire</h3>
+<p>Les différents modes de parcours (vélo, piéton, voiture,train ou ligne) ainsi que les différents
+fournisseurs d'itinéraires sont sélectionnés sur cette barre d'outils.</p>
+<img src="RouterButtons.PNG" />
+<p>Les boutons bleus à gauche permettent de sélectionner le mode de parcours, les autres boutons
+sélectionnent les fournisseurs d'itinéraire.</p>
+<p>Seuls les boutons utilisables sont visibles dans la barre d'outils:</p>
+<ul>
+<li>les modes de parcours dépendent du fournisseur d'itinéraire sélectionné</li>
+<li>un fournisseur d'itinéraire n'est présent que si le plugin correspondant est installé
+et si la clef d'accès pour ce fournisseur est connue (qund une clef d'accès est nécessaire).</li>
+</ul>
+<p><a id="EditBoxes"></a></p>
+<h2>Boites d'édition</h2>
+<p>Parfois, une boite d'édition peut masquer un objet de la carte que l'on désire consulter. Il est
+toujours possible de glisser / déposer une boite d'édition en la saississant par la barre dans la
+partie supérieure.</p>
+<p><a id="Routes"></a></p>
+<h2>Trajets et points de passage</h2>
+<p>Pour ajouter, modifier ou supprimer des points de passage, il est nécessaire d'éditer le trajet depuis l'interface
+ou via le menu contextuel du trajet si celui-ci existe déjà.</p>
+<p>Les autres modifications (notes, propriétés du trajet) peuvent se faire, que le trajet
+soit édité ou non.</p>
+<p><a id="AddWayPoint"></a></p>
+<h3>Créer un point de passage</h3>
+<p>Pour créer un point de passage, faites un clic droit sur la carte à l'endroit souhaité et choissisez
+&quot;Sélectionner cet endroit comme point de départ&quot;, &quot;Sélectionner cet endroit comme point intermédiaire&quot;
+ou &quot;Sélectionner cet endroit comme point d'arrivée&quot; dans le menu:</p>
+<img src="MapContextMenuFR.PNG" />
+<p>Une icône verte (pour le point de départ), orange (pour un point intermédiaire) ou
+rouge (pour le point de fin) est ajoutée à la carte à l'endroit choisi.</p>
+<p>Un point intermédiaire ajouté via le menu contextuel sera toujours ajouté à la fin de la
+liste des points intermédiaires.</p>
+<p><a id="AddWayPointDragDrop"></a></p>
+<h3>Ajouter un point de passage avec un glisser/déposer</h3>
+<p>Amenez la souris sur le trajet pour voir apparaître un point de passage temporaire gris.
+En faisant ensuite un glisser / déposer de celui-ci, le point de passage est ajouté au trajet.</p>
+<img src="AddWayPointFR.PNG" />
+<p><a id="ModifyWayPoint"></a></p>
+<h3>Modifier un point de passage</h3>
+<p>Faites un glisser / déposer du point de passage sur la carte pour modifier un point de passage</p>
+<p><a id="DeleteWayPoint"></a></p>
+<h3>Supprimer un point de passage</h3>
+<p>Faites un clic droit sur le point de passage et choisissez &quot;supprimer ce point de passage&quot; dans le menu.
+Il n'est pas possible de supprimer le point de départ ni le point de fin. Seul un glisser / déposer
+est possible.</p>
+<p><a id="RenameWayPoint"></a></p>
+<h3>Renommer un point de passage ou changer son adresse</h3>
+<p>Quand un point de passage est créé, son adresse est recherchée avec Nominatim. Si un nom, tel que
+un nom de magasin ou d'immeuble est trouvé par Nominatim, celui-ci sera également ajouté.</p>
+<p>Vous pouvez modifier ce nom et cette adresse en faisant un clic droit sur le point de passage et en
+sélectionnant &quot;Modifier les propriétés de ce point de passage&quot; dans le menu contextuel.</p>
+<p>À noter cependant que chaque fois que le point de passage est déplacé, le nom et l'adresse seront
+modifiés par Nominatim et vos modificatons perdues. Il vaut donc mieux faire ces changements quand vous êtes
+certain de ne plus déplacer ce point de passage.</p>
+<p><a id="ItineraryModeAndProvider"></a></p>
+<h3>Choisir un mode de parcours et un fournisseur d'itinéraire</h3>
+<p>Utilisez les boutons dans le bas du contrôle pour modifier le mode de déplacement (vélo, piéton,
+voiture ou train) ainsi que le fournisseur de trajet.</p>
+<img src="RouterButtons.PNG" />
+<p><a id="ComputingItinerary"></a></p>
+<h3>Calcul de l'itinéraire</h3>
+<p>Lorsque le point de départ et le point de fin sont connus, l'itinéraire est calculé et affiché sur
+la carte. Il en est de même chaque fois qu'un point intermédiaire est ajouté ou qu'un point de
+passage est déplacé.</p>
+<p>La description de l'itinéraire est également affichée dans la partie &quot;Itinéraire et notes&quot;.</p>
+<p><a id="SaveOrDiscardRoute"></a></p>
+<h3>Sauver ou abandonner les modifications</h3>
+<p>Lorsque l'édition d'un trajet est terminée, il faut sauver celle-ci. Faites un clic droit sur le trajet
+et sélectionnez 'Sauver les modifications de ce trajet' dans le menu contextuel.</p>
+<p>Il est également possible d'abandonner l'édition d'un trajet et de revenir à la situation avant
+modifications avec la commande 'Abandonner les modifications de ce trajet'. Attention, <strong>toutes</strong>
+les modifications seront perdues, y compris les propriétés modifiées et les notes ajoutées
+depuis le début de l'édition.</p>
+<p><a id="RouteProfile"></a></p>
+<h3>Profil d'un trajet</h3>
+<p>Lorsque un trajet est calculé avec GraphHopper ou OpenRouteService, il est possible d'afficher un profil de ce trajet.
+Faites un clic droit sur le <strong>trajet</strong> et sélectionnez &quot;Voir le profil du trajet&quot; dans le menu contextuel.</p>
+<img src="ProfileFR.PNG" />
+<p>Il peut y avoir plusieurs fenêtres affichant des profils ouvertes.</p>
+<p>Il est possible de déplacer un profil sur l'écran en faisant un glisser/déposer de la barre supérieure de la fenêtre.</p>
+<p><a id="TrainItinerary"></a></p>
+<h3>Itinéraire en train</h3>
+<p>Reportez vous à la <a href="https://github.com/wwwouaiebe/leaflet.TravelNotesPublicTransport/blob/master/README.md">documentation de leaflet.TravelNotesPublicTransport</a>
+pour plus d'explications sur la façon de créer un itinéraire en train.</p>
+<p><a id="RouteDlg"></a></p>
+<h3>La boite d'édition des propriétés d'un trajet</h3>
+<p>Faites un clic droit sur le trajet et sélectionnez &quot;Modifier les propriétés de ce trajet&quot; dans le menu contextuel.</p>
+<img src="RoutePropertiesFR.PNG" />
+<p>Vous pouvez tout d'abord modifier les noms du trajet et remplacer le nom proposé par le programme
+par un nom de votre choix.</p>
+<p>Notez que quand le nom a été modifié, les adresses ne seront plus ajoutées au nom, même si vous modifiez les
+points de départ et d'arrivée.</p>
+<p>Il est également possible de modifier la largeur du trajet ainsi que le type de ligne et également
+chainer le trajet au voyage.</p>
+<p>Enfin vous pouvez modifier la couleur utilisée pour afficher le trajet. Sélectionnez une couleur parmi les
+6 rangées de boutons de couleur. La tirette sous les boutons de couleur ajoute plus ou moins
+de nuance de rouge dans les couleurs proposées.</p>
+<p>Chaque nuance de rouge, vert et bleu pour la couleur désirée peut également être réglée individuellement
+via les 3 zones d'édition des couleurs.</p>
+<p><a id="PrintRouteMaps"></a></p>
+<h3>Imprimer les cartes d'un trajet</h3>
+<p>Attention: cette commande est expérimentale. Elle peut ne pas fonctionner avec votre installation de Travel &amp; Notes
+si vous avez ajouté d'autres éléments à la page. De plus, tous les browsers n'ont pas implémenté toutes
+les balises css nécessaires. Si cette commande ne vous convient pas, vous pouvez la désactiver à partir
+du fichier TravelNotesConfig.json (printRouteMap.isEnabled).
+Voir le <a href="GuideInstallationFR.md#TravelNotesConfigJson">guide d'installation</a>.</p>
+<p>Faites un clic droit sur le trajet pour lequel vous voulez imprimer les cartes et sélectionnez
+&quot;Imprimer les cartes de ce trajet&quot; dans le menu contextuel.</p>
+<p>La boite d'édition est affichée:</p>
+<img src="PrintRouteMapDlgFR.PNG" />
+<p>&quot;Largeur du papier&quot; et &quot;hauteur du papier&quot;: il s'agit de la largeur et hauteur de la zone imprimable
+du papier. Vous devez contrôler celle-ci avec votre imprimante.</p>
+<p>&quot;Dimension de la marge&quot;: c'est une zone autour de la carte et à l'interieur de celle-ci qui sera réimprimée
+dans la carte suivante.</p>
+<p>&quot;Zoom&quot; : le zoom à utiliser pour les cartes. Il est indépendant du zoom utilisé pour afficher la carte
+avant le lancement de la commande. Pour des raisons de performance des serveurs de tuiles, il n'est
+pas possible d'utiliser un zoom plus grand que 15.</p>
+<p>&quot;Insérer un saut de page&quot;: quand cette case est cochée, un saut de page est inséré après chaque carte.</p>
+<p>&quot;Imprimer les notes du trajet&quot; quand cette case est cochée, l'icône des notes est imprimée sur la carte.</p>
+<p>Lorsque la boite d'édition est fermée avec le bouton &quot;ok&quot;, la carte et les contrôles sont remplacés par
+des vues de la carte qui ont les dimensions souhaitées et deux boutons sont présents en haut à droite:</p>
+<img src="PrintRouteMapToolbar.PNG" />
+<p>Le bouton 🖨️ lancera la commande d'impression de votre browser et le bouton ❌
+annulera l'impression et réaffichera la carte.</p>
+<p>Lorsque la commande d'impression du browser est fermée, les vues d'impression seront également fermées
+et la carte réaffichée.</p>
+<p>Toutes les valeurs par défaut de la boite d'édition peuvent être modifiées dans le fichier TravelNotesConfig.json.
+Voir le <a href="GuideInstallationFR.md#TravelNotesConfigJson">guide d'installation</a>.</p>
+<p>Évitez de surcharger les serveurs de tuiles. Ne lancez cette commande que si vous en avez réellement besoin.
+Diminuer les dimensions du papier, la dimension de la marge et le zoom diminuera également le nombre de tuiles
+nécessaires.</p>
+<p>Lorsque la boite d'édition est fermée, le programme calcule le nombre de tuiles nécessaires. Si ce nombre est
+trop important, la commande est arrêtée.</p>
+<h4>Quelques astuces pour imprimer avec un browser basé sur Chrome ( Brave, Vivaldi, MS Edge dernière version, Chromium, Chrome )</h4>
+<ul>
+<li>Cochez la case &quot;Insérer un saut de page&quot;</li>
+<li>indiquez comme &quot;hauteur de papier&quot; la hauteur réelle de votre papier moins les marges d'impression haut et bas
+moins 1 mm</li>
+<li>pour les geeks: vous pouvez insérer un fichier css dans la page html avec une règle css @page pour fixer les
+dimensions, orientation et marges du papier:</li>
+</ul>
+<pre class="prettyprint source"><code>@page {
+  size: A4 landscape;
+  margin: 7mm;
+}
+</code></pre>
+<h4>Quelques astuces pour imprimer avec Firefox</h4>
+<ul>
+<li>Ne jamais cocher la case &quot;Insérer un saut de page&quot; ni utiliser une règle css @page. Si vous faites cela,
+le trajet ne sera pas imprimé correctement après le saut de page.</li>
+<li>indiquez comme &quot;hauteur de papier&quot; la hauteur réelle de votre papier moins les marges d'impression haut et bas
+moins 1 mm (à vérifier avec votre imprimante...). Vérifiez que tout est correct avec la commande &quot;Aperçu avant impression&quot;
+de Firefox.</li>
+</ul>
+<p><a id="Notes1"></a></p>
+<h2><strong>Notes</strong></h2>
+<p>Il y a deux sortes de notes: les notes de voyage et les notes de trajet. La position des notes de voyage
+est totalement libre et elles seront toutes affichées au début du livre de voyage.
+Les notes de trajet sont toujours positionnées sur un trajet et affichées avec l'itinéraire dans le
+livre de voyage.</p>
+<p><a id="NewTravelNote"></a></p>
+<h3>Créer une note de voyage</h3>
+<p>Faite un clic droit à l'endroit souhaité sur la <strong>carte</strong> et sélectionnez &quot;Ajouter une note de voyage&quot; dans le
+menu contextuel.</p>
+<p><a id="ReorderTravelNote"></a></p>
+<h3>Modifier l'ordre des notes de voyage</h3>
+<p>L'ordre des notes de voyage peut se modifier en faisant du glisser / déposer dans la liste des notes de voyage de l'interface utilisateur.</p>
+<p><a id="NewRouteNote"></a></p>
+<h3>Créer une note de trajet</h3>
+<p>Faite un clic droit à l'endroit souhaité sur le <strong>trajet</strong> et sélectionnez &quot;Ajouter une note à ce trajet&quot;
+dans le menu contextuel.</p>
+<p><a id="ViewNote"></a></p>
+<h3>Consulter une note</h3>
+<p>Faites un clic gauche sur l'icône de la note.</p>
+<p><a id="ModifyNote"></a></p>
+<h3>Modifier le contenu d'une note</h3>
+<p>Faites un clic droit sur l'icône de la note et sélectionnez &quot;Éditer cette note&quot; dans le menu contextuel.</p>
+<p><a id="DeleteNote"></a></p>
+<h3>Effacer une note</h3>
+<p>Faites un clic droit sur l'icône de la note et sélectionnez &quot;Effacer cette note&quot; dans le menu contextuel.</p>
+<p><a id="MoveNote"></a></p>
+<h3>Déplacer l'icône d'une note</h3>
+<p>Faites un glisser / déposer de la note. Une ligne sera tracée entre l'icône de la note et le point
+choisi pour l'insertion de la note. La latitude et longitude de la note ne sont pas modifiées.</p>
+<p><a id="LatLngNote"></a></p>
+<h3>Modifier la latitude et la longitude d'une note</h3>
+<p>Déplacez l'icône de la note pour que la ligne soit visible. Déplacez la souris près de l'extrémité de la ligne.
+Lorsque un petit carré noir apparait sur celle-ci, faites un glisser / déposer de ce carré et de la ligne.</p>
+<p>Une note de trajet a toujours sa latitude et longitude sur le trajet. Lorsque la ligne est déposée,
+le point le plus proche sur le trajet est recherché et l'extrémité libre de la ligne déplacé vers ce point.</p>
+<p><a id="RouteToTravelNote"></a></p>
+<h3>Transformer une note de trajet en note de voyage</h3>
+<p>Faites un clic droit sur l'icône de la note et sélectionnez &quot;Transformer en note de voyage&quot; dans le menu
+contextuel. La transformation n'est possible que si aucun trajet n'est en cours d'édition.</p>
+<p><a id="TravelToRouteNote"></a></p>
+<h3>Transformer une note de voyage en note de trajet</h3>
+<p>Faites un clic droit sur l'icône de la note et sélectionnez &quot;Transformer en note de trajet&quot; dans le menu
+contextuel. La transformation n'est possible que si aucun trajet n'est en cours d'édition. La note sera
+attachée au trajet le plus proche de celle-ci.</p>
+<p><a id="AllManeuverNotesFromOsm"></a></p>
+<h3>Créer une note pour chaque manœuvre du trajet</h3>
+<p>Faites un clic droit sur le trajet et sélectionnez &quot;Créer une note pour chaque manœuvre du trajet&quot; dans le menu
+contextuel. Une demande de confirmation est affichée.
+Pour chaque manœuvre du trajet, <a href="#SvgNoteFromOsm">une note en SVG à partir des données OpenStreetMap </a> sera créée.</p>
+<p><a id="NoteDlg"></a></p>
+<h3>La boite d'édition d'une note</h3>
+<img src="NoteEditionFR.PNG" />
+<p>Dans le haut de la boite, une liste déroulante permet de choisir des notes prédéfinies. Il est possible
+de modifier cette liste. Consultez le <a href="GuideInstallationFR.md#TravelNotesNoteDialogJson">guide d'installation</a>.</p>
+<p>Le bouton :file_folder: vous permet de charger votre propre fichier avec des notes prédéfinies dans
+Travel &amp; Notes. Consultez le <a href="GuideInstallationFR.md#TravelNotesNoteDialogJson">guide d'installation</a>. pour savoir comment créer ce fichier.</p>
+<p>Les boutons div p span et a permettent d'ajouter les balises html &lt;div&gt;, &lt;p&gt;, &lt;span&gt;
+et &lt;a&gt; dans les zones d'édition. Tous les autres boutons sont modifiables et permettent aussi
+d'insérer du texte prédéfini dans les zones d'édition. Voir le <a href="GuideInstallationFR.md#TravelNotesNoteDialogJson">guide d'installation</a>.</p>
+<p>Chaque zone d'édition peut contenir du texte simple ou du html, à l'exception de la zone &quot;Lien&quot;.</p>
+<p>La zone &quot;Contenu de l'icône&quot; sera utilisée pour représenter la note sur la carte et ne peut pas être
+vide (laisser cette zone vide empêcherait toute modification ultérieure de la note).</p>
+<p>La zone &quot;Adresse&quot; est complétée automatiquement lors de la création de la note -
+<a href="http://wiki.openstreetmap.org/wiki/Nominatim">Nominatim</a> est utilisé pour géolocaliser les notes.
+Cette zone ne sera jamais modifiée par Nominatim par la suite, même si la note a été déplacée.
+Le bouton 🔄 permet cependant de demander une nouvelle géolocalisation à Nominatim.</p>
+<p><a id="SvgNoteFromOsm"></a></p>
+<h4>Note de trajet prédéfinie &quot;Icône SVG depuis OSM&quot;</h4>
+<p>Lorsque l'on crée une note de trajet, il est possible de choisir &quot;Icône SVG depuis OSM&quot; dans la
+liste des notes prédéfinies. Dans ce cas, Travel &amp; Notes va rechercher dans Openstreetmap
+l'intersection la plus proche située sur le trajet et va créer une icône en SVG reprenant les rues
+proches de cette intersection.</p>
+<p>L'intersection sera placée au centre de l'icône et le contenu de celle-ci sera orientée en fonction
+du trajet suivi: la route par laquelle on arrive à l'intersection sera tournée vers le bas de l'icône.</p>
+<p>L'adresse sera également modifiée: tous les noms de rue trouvés à l'intersection seront indiqués,
+séparés par un symbole ⪥. Le premier nom de rue sera toujours celui par lequel on arrive à
+l'intersection et le dernier nom celui par lequel on quitte l'intersection. Ce nom sera précédé
+d'une flèche indiquant la direction à suivre. Le nom de la commune / ville sera également ajouté.
+Si un nom de hameau ou de village est trouvé à proximité de l'intersection, celui-ci sera également
+ajouté entre parenthèses.</p>
+<p><a id="NoteSamples"></a></p>
+<h4>Quelques exemples de notes</h4>
+<h5>Une note simple créée à partir d'une note prédéfinie</h5>
+<p>La boite de dialogue:</p>
+<img src="NoteStandard1FR.PNG" />
+<p>Et le résultat dans TravelNotes:</p>
+<img src="NoteStandard2FR.PNG" />
+<h5>Une note de trajet créée avec &quot;Icône SVG depuis OSM&quot;</h5>
+<p>Le trajet va de la droite vers la gauche. L'intersection des rues Tiyou d'Hestreu, Chemin des Patars
+et Basse Voie se trouve au centre de l'icône. Les rues sont orientées de telle sorte que une personne
+qui suit le trajet sur le terrain voit les rues dans la même position que sur l'icône.
+La rue par laquelle on arrive est le Tiyou d'Hestreu. Une flèche vers la droite indique qu'il faut
+tourner à droite dans la Basse Voie.
+Nous sommes dans la commune de Anthisnes et au hameau de Limont.</p>
+<img src="SVGIconFR.PNG" />
+<h5>Une note avec un texte sur une ligne</h5>
+<p>La boite de dialogue:</p>
+<img src="NoteTexte1FR.PNG" />
+<p>Et le résultat dans TravelNotes:</p>
+<img src="NoteTexte2FR.PNG" />
+<h5>Une note avec une photo</h5>
+<p>La boite de dialogue:</p>
+<img src="NotePhoto1FR.PNG" />
+<p>Et le résultat dans TravelNotes:</p>
+<img src="NotePhoto2FR.PNG" />
+<p><a id="MapsMenu"></a></p>
+<h2><strong>Menu des fonds de carte</strong></h2>
+<p>À gauche de l'écran une barre d'outils permet de choisir différents fond de cartes. Seul un petit
+rectangle noir est visible à l'écran:</p>
+<img src="MapsInterface1FR.PNG" />
+<p>Amenez la souris sur ce rectangle pour afficher toute la barre d'outils:</p>
+<img src="MapsInterface2FR.PNG" />
+<p>Pour chaque fond de carte un bouton est présent dans la barre d'outils. La composition de la barre
+d'outils dépend des cartes définies dans le fichier TravelNotesLayers.json ainsi que des clefs
+d'accès qui ont été introduites. Consultez le <a href="GuideInstallationFR.md#TravelNotesLayersJson">guide d'installation</a>.</p>
+<p>Il est possible de se déplacer dans la barre d'outils en utilisant la roulette de la souris.</p>
+<p><a id="Roadbook"></a></p>
+<h2><strong>Livre de voyage</strong></h2>
+<p>Cliquez sur le bouton 📋. Un nouvel onglet est créé avec le livre de voyage. Celui-ci contient
+tous les trajets ainsi que toutes les notes qui ont été créées sur la carte. Il est possible de choisir
+ce que l'on désire voir présent dans le livre de voyage via le menu en haut de page :</p>
+<img src="RoadbookFR.PNG" />
+<p>Le bouton &quot;Enrégistrer&quot; permet de sauver le fichier html sur votre PC.</p>
+<p><a id="PrepareTravel"></a></p>
+<h2><strong>Préparer un voyage et le consulter depuis internet</strong></h2>
+<p>Il est possible de préparer un voyage, sauver celui-ci dans un fichier sur un serveur web et consulter
+celui-ci depuis internet.</p>
+<p>Pour consulter le voyage, il faut appeler TravelNotes en lui donnant en paramètre dans l'url l'adresse
+du fichier convertie en base64.</p>
+<pre class="prettyprint source"><code>https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==
+</code></pre>
+<p>aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==
+est l'équivalent de
+https://wwwouaiebe.github.io/samples/Liege/StationToYouthHostel.trv encodé en base64</p>
+<p>Voir l'exemple sur la <a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==">démo</a></p>
+<p>Quand un tel fichier est affiché, il n'est pas possible de modifier celui-ci. Le contrôle n'est pas
+visible et tous les menus contextuels sont désactivés.</p>
+<p><a id="Viewer"></a></p>
+<h2><strong>Viewer</strong></h2>
+<p>Certains browsers anciens, surtout sur des mobiles, ne comprennent pas toujours tout le code JavaScript
+de Travel &amp; Notes. Dans ce cas, vous pouvez essayer une version simplifiée de Travel &amp; Notes qui permet
+juste la visualisation des fichiers. L'url doit être complétée de la même façon que pour
+la version normale:</p>
+<pre class="prettyprint source"><code>https://wwwouaiebe.github.io/leaflet.TravelNotes/viewer/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==
+</code></pre>
+<p>Vous pouvez cependant ajouter &amp;lay à la fin de l'url pour afficher également une barre d'outils
+reprenant les fonds de carte ne nécéssitant pas de clef d'accès.</p>
+<pre class="prettyprint source"><code>https://wwwouaiebe.github.io/leaflet.TravelNotes/viewer/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==&lay
+</code></pre>
+<p>Voir l'exemple sur la
+<a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/viewer/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==&amp;lay">démo</a></p>
+<p>D'autres exemples:</p>
+<p><a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/viewer/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL1VLMjAxOS9VSzIwMTkudHJ2">Un extrait de mon dernier voyage en vélo de Dover à Chester</a></p>
+<p><a href="https://wwwouaiebe.github.io/samples/UK2019/UK2019.pdf">Les cartes du premier trajet de Dover à Chester</a></p>
+<p><a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/viewer/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlLVRyb21zw7gvc3VvbWkyMDE4MDYwOC50cnY=">Un voyage en train, bus et vélo de Liège à Tromsø</a></p>
+<p><a href="https://wwwouaiebe.github.io/samples/Liege-Troms%C3%B8/suomi20180608-Roadbook.html">Et le livre de voyage de Liège à Tromsø</a></p>
+</article>
+
+</section>
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:03 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

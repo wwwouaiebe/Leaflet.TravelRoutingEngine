@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: core/RouteEditor.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: core/RouteEditor.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/*
+Changes:
+	- v1.0.0:
+		- created
+	- v1.1.0:
+		- Issue #28 : Disable "select this point as start point " and "select this point as end point"
+			when a start point or end point is already present
+		- Issue #30 : Add a context menu with delete command to the waypoints
+		- Issue #33 : Add a command to hide a route
+		- Issue #34 : Add a command to show all routes
+	- v1.3.0:
+		- added cutRoute method (not tested...)
+	- v1.4.0:
+		- Replacing DataManager with TravelNotesData, Config, Version and DataSearchEngine
+		- modified getClosestLatLngDistance to avoid crash on empty routes
+		- fixed issue #45
+	- v1.5.0:
+		- Issue #52 : when saving the travel to the file, save also the edited route.
+		- Issue #62 : Remove time from route popup when readonly travel.
+	- v1.6.0:
+		- Issue #65 : Time to go to ES6 modules?
+		- Issue #66 : Work with promises for dialogs
+		- Issue #70 : Put the get...HTML functions outside of the editors
+		- Issue #68 : Review all existing promises.
+	- v1.9.0:
+		- issue #101 : Add a print command for a route
+	- v1.12.0:
+		- Issue #120 : Review the UserInterface
+Doc reviewed 20200806
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file RouteEditor.js
+@copyright Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module RouteEditor
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+import { theTranslator } from '../UI/Translator.js';
+import { theAPIKeysManager } from '../core/APIKeysManager.js';
+import { theConfig } from '../data/Config.js';
+import { theTravelNotesData } from '../data/TravelNotesData.js';
+import { theErrorsUI } from '../UI/ErrorsUI.js';
+import { theDataSearchEngine } from '../data/DataSearchEngine.js';
+import { newRoute } from '../data/Route.js';
+import { newGpxFactory } from '../core/GpxFactory.js';
+import { newRoutePropertiesDialog } from '../dialogs/RoutePropertiesDialog.js';
+import { newPrintRouteMapDialog } from '../dialogs/PrintRouteMapDialog.js';
+import { theEventDispatcher } from '../util/EventDispatcher.js';
+import { theGeometry } from '../util/Geometry.js';
+import { newZoomer } from '../core/Zoomer.js';
+import { theProfileWindowsManager } from '../core/ProfileWindowsManager.js';
+import { newPrintFactory } from '../printMap/PrintFactory.js';
+import { ROUTE_EDITION_STATUS, DISTANCE, LAT_LNG, ZERO, INVALID_OBJ_ID } from '../util/Constants.js';
+
+let ourMustZoomToRouteAfterRouting = false;
+let ourRoutingRequestStarted = false;
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourComputeRouteDistances
+@desc This method compute the route, itineraryPoints and maneuvers distances
+@param {Route} route The route for witch the distances are computed
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourComputeRouteDistances ( route ) {
+
+	// Computing the distance between itineraryPoints
+	let itineraryPointsIterator = route.itinerary.itineraryPoints.iterator;
+	let maneuverIterator = route.itinerary.maneuvers.iterator;
+
+	itineraryPointsIterator.done;
+	maneuverIterator.done;
+
+	maneuverIterator.value.distance = DISTANCE.defaultValue;
+	maneuverIterator.done;
+	route.distance = DISTANCE.defaultValue;
+	route.duration = DISTANCE.defaultValue;
+
+	while ( ! itineraryPointsIterator.done ) {
+		itineraryPointsIterator.previous.distance = theGeometry.pointsDistance (
+			itineraryPointsIterator.previous.latLng,
+			itineraryPointsIterator.value.latLng
+		);
+		route.distance += itineraryPointsIterator.previous.distance;
+		maneuverIterator.previous.distance += itineraryPointsIterator.previous.distance;
+		if ( maneuverIterator.value.itineraryPointObjId === itineraryPointsIterator.value.objId ) {
+			route.duration += maneuverIterator.previous.duration;
+			maneuverIterator.value.distance = DISTANCE.defaultValue;
+			if (
+				maneuverIterator.next
+				&amp;&amp;
+				maneuverIterator.value.itineraryPointObjId === maneuverIterator.next.itineraryPointObjId
+			) {
+
+				// 2 maneuvers on the same itineraryPoint. We skip the first maneuver
+				maneuverIterator.done;
+				maneuverIterator.value.distance = DISTANCE.defaultValue;
+			}
+			maneuverIterator.done;
+
+		}
+	}
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourChainRoutes
+@desc This method recompute the distances when routes are chained
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourChainRoutes ( ) {
+	let routesIterator = theTravelNotesData.travel.routes.iterator;
+	let chainedDistance = DISTANCE.defaultValue;
+	while ( ! routesIterator.done ) {
+		if ( routesIterator.value.chain ) {
+			routesIterator.value.chainedDistance = chainedDistance;
+			chainedDistance += routesIterator.value.distance;
+		}
+		else {
+			routesIterator.value.chainedDistance = DISTANCE.defaultValue;
+		}
+		let notesIterator = routesIterator.value.notes.iterator;
+		while ( ! notesIterator.done ) {
+			notesIterator.value.chainedDistance = routesIterator.value.chainedDistance;
+		}
+	}
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourHaveValidWayPoints
+@desc This method verify that all waypoints have valid coordinates ( reminder: a route have always a startpoint
+and an endpoint!)
+@param {Route} route The route for witch the waypoints are verified
+@return {boolean} true when all waypoints have valid coordinates
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourHaveValidWayPoints ( route ) {
+	let haveValidWayPoints = true;
+	route.wayPoints.forEach (
+		wayPoint => {
+			haveValidWayPoints =
+				haveValidWayPoints
+				&amp;&amp;
+				LAT_LNG.defaultValue !== wayPoint.lat
+				&amp;&amp;
+				LAT_LNG.defaultValue !== wayPoint.lng;
+		}
+	);
+	return haveValidWayPoints;
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRoutingError
+@desc Error handler for the startRouting method
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRoutingError ( err ) {
+	ourRoutingRequestStarted = false;
+	theErrorsUI.showError ( err );
+	console.log ( err ? err : 'An error occurs when asking the route to the provider' );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRoutingOk
+@desc Success handler for the startRouting method
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRoutingOk ( ) {
+
+	ourRoutingRequestStarted = false;
+
+	ourComputeRouteDistances ( theTravelNotesData.travel.editedRoute );
+
+	// Placing the waypoints on the itinerary
+	if ( 'circle' !== theTravelNotesData.travel.editedRoute.itinerary.transitMode ) {
+		let wayPointsIterator = theTravelNotesData.travel.editedRoute.wayPoints.iterator;
+		while ( ! wayPointsIterator.done ) {
+			if ( wayPointsIterator.first ) {
+				wayPointsIterator.value.latLng =
+					theTravelNotesData.travel.editedRoute.itinerary.itineraryPoints.first.latLng;
+			}
+			else if ( wayPointsIterator.last ) {
+				wayPointsIterator.value.latLng =
+					theTravelNotesData.travel.editedRoute.itinerary.itineraryPoints.last.latLng;
+			}
+			else {
+				wayPointsIterator.value.latLng = theGeometry.getClosestLatLngDistance (
+					theTravelNotesData.travel.editedRoute,
+					wayPointsIterator.value.latLng
+				).latLng;
+			}
+		}
+	}
+
+	// the position of the notes linked to the route is recomputed
+	let notesIterator = theTravelNotesData.travel.editedRoute.notes.iterator;
+	while ( ! notesIterator.done ) {
+		let latLngDistance = theGeometry.getClosestLatLngDistance (
+			theTravelNotesData.travel.editedRoute,
+			notesIterator.value.latLng
+		);
+		notesIterator.value.latLng = latLngDistance.latLng;
+		notesIterator.value.distance = latLngDistance.distance;
+	}
+
+	ourChainRoutes ( );
+
+	// and the notes sorted
+	theTravelNotesData.travel.editedRoute.notes.sort (
+		( first, second ) => first.distance - second.distance
+	);
+
+	if ( ourMustZoomToRouteAfterRouting ) {
+		newZoomer ( ).zoomToRoute ( theTravelNotesData.travel.editedRoute.objId );
+	}
+
+	theProfileWindowsManager.createProfile ( theTravelNotesData.travel.editedRoute );
+
+	theEventDispatcher.dispatch (
+		'routeupdated',
+		{
+			removedRouteObjId : theTravelNotesData.travel.editedRoute.objId,
+			addedRouteObjId : theTravelNotesData.travel.editedRoute.objId
+		}
+	);
+
+	theEventDispatcher.dispatch ( 'roadbookupdate' );
+
+	// and the itinerary and waypoints are displayed
+	theEventDispatcher.dispatch ( 'showitinerary' );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class
+@classdesc This class contains methods fot Routes creation or modifications
+@see {@link theRouteEditor} for the one and only one instance of this class
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+class RouteEditor {
+
+	/**
+	This method add a route to the Travel and, if no other route is beind edited,
+	start the edition of this new route
+	@fires setprovider
+	@fires settransitmode
+	@fires routeupdated
+	@fires showitinerary
+	@fires setrouteslist
+	@fires roadbookupdate
+	*/
+
+	addRoute ( ) {
+		let route = newRoute ( );
+		theTravelNotesData.travel.routes.add ( route );
+		if ( ROUTE_EDITION_STATUS.editedChanged === theTravelNotesData.travel.editedRoute.editionStatus ) {
+			ourChainRoutes ( );
+			theEventDispatcher.dispatch ( 'setrouteslist' );
+			theEventDispatcher.dispatch ( 'roadbookupdate' );
+		}
+		else {
+			this.editRoute ( route.objId );
+		}
+	}
+
+	/**
+	This method start the edition of a route
+	@param {!number} routeObjId The objId of the route to edit.
+	@fires setprovider
+	@fires settransitmode
+	@fires routeupdated
+	@fires showitinerary
+	@fires setrouteslist
+	@fires roadbookupdate
+	*/
+
+	editRoute ( routeObjId ) {
+		if ( ROUTE_EDITION_STATUS.editedChanged === theTravelNotesData.travel.editedRoute.editionStatus ) {
+
+			// not possible to edit - the current edited route is not saved or cancelled
+			theErrorsUI.showError (
+				theTranslator.getText ( 'RouteEditor - Not possible to edit a route without a save or cancel' )
+			);
+			return;
+		}
+
+		// We verify that the provider  for this route is available
+		let initialRoute = theDataSearchEngine.getRoute ( routeObjId );
+		let providerName = initialRoute.itinerary.provider;
+		let provider = theTravelNotesData.providers.get ( providerName.toLowerCase ( ) );
+		if (
+			providerName
+			&amp;&amp;
+			( '' !== providerName )
+			&amp;&amp;
+			(
+				( ! provider )
+				||
+				( provider.providerKeyNeeded &amp;&amp; ! theAPIKeysManager.getKey ( providerName ) )
+			)
+		) {
+			theErrorsUI.showError (
+				theTranslator.getText (
+					'RouteEditor - Not possible to edit a route created with this provider',
+					{ provider : providerName }
+				)
+			);
+			return;
+		}
+
+		if ( INVALID_OBJ_ID !== theTravelNotesData.editedRouteObjId ) {
+
+			// the current edited route is not changed. Cleaning the editors
+			this.cancelEdition ( );
+		}
+
+		// Provider and transit mode are changed in the itinerary editor
+		if ( providerName &amp;&amp; '' !== providerName ) {
+			theEventDispatcher.dispatch ( 'setprovider', { provider : providerName } );
+		}
+		let transitMode = initialRoute.itinerary.transitMode;
+		if ( transitMode &amp;&amp; '' !== transitMode ) {
+			theEventDispatcher.dispatch ( 'settransitmode', { transitMode : transitMode } );
+		}
+
+		// The edited route is pushed in the editors
+		theTravelNotesData.travel.editedRoute = newRoute ( );
+		initialRoute.editionStatus = ROUTE_EDITION_STATUS.editedNoChange;
+
+		// Route is cloned, so we can have a cancel button in the editor
+		theTravelNotesData.travel.editedRoute.jsonObject = initialRoute.jsonObject;
+		theTravelNotesData.editedRouteObjId = initialRoute.objId;
+		theTravelNotesData.travel.editedRoute.hidden = false;
+		initialRoute.hidden = false;
+		theProfileWindowsManager.updateProfile (
+			theTravelNotesData.editedRouteObjId,
+			theTravelNotesData.travel.editedRoute
+		);
+		ourChainRoutes ( );
+		theEventDispatcher.dispatch (
+			'routeupdated',
+			{
+				removedRouteObjId : initialRoute.objId,
+				addedRouteObjId : theTravelNotesData.travel.editedRoute.objId
+			}
+		);
+
+		theEventDispatcher.dispatch ( 'roadbookupdate' );
+		theEventDispatcher.dispatch ( 'showitinerary' );
+		theEventDispatcher.dispatch ( 'setrouteslist' );
+	}
+
+	/**
+	This method removes a route from the travel
+	@param {!number} routeObjId The objId of the Route to remove.
+	@fires routeupdated
+	@fires showitinerary
+	@fires setrouteslist
+	@fires roadbookupdate
+	*/
+
+	removeRoute ( routeObjId ) {
+		let routeToDeleteObjId = routeObjId;
+		if (
+			(
+				routeToDeleteObjId === theTravelNotesData.editedRouteObjId
+				||
+				routeToDeleteObjId === theTravelNotesData.travel.editedRoute.objId
+			)
+		) {
+			if ( ROUTE_EDITION_STATUS.editedChanged === theTravelNotesData.travel.editedRoute.editionStatus ) {
+
+				// cannot remove the route currently edited and changed
+				theErrorsUI.showError ( theTranslator.getText ( 'TravelEditor - Cannot remove an edited route' ) );
+				return;
+			}
+
+			routeToDeleteObjId = theTravelNotesData.editedRouteObjId;
+			this.cancelEdition ( );
+
+		}
+
+		theEventDispatcher.dispatch (
+			'routeupdated',
+			{
+				removedRouteObjId : routeToDeleteObjId,
+				addedRouteObjId : INVALID_OBJ_ID
+			}
+		);
+
+		theTravelNotesData.travel.routes.remove ( routeToDeleteObjId );
+		theProfileWindowsManager.deleteProfile ( routeToDeleteObjId );
+		ourChainRoutes ( );
+
+		theEventDispatcher.dispatch ( 'roadbookupdate' );
+		theEventDispatcher.dispatch ( 'setrouteslist' );
+	}
+
+	/**
+	This method removes a maneuver from the edited route
+	@param {!number} maneuverObjId The objId of the Maneuver to remove.
+	@fires showitinerary
+	@fires roadbookupdate
+	*/
+
+	removeManeuver ( maneuverObjId ) {
+		let previousManeuver =
+			theTravelNotesData.travel.editedRoute.itinerary.maneuvers.previous (
+				maneuverObjId,
+				maneuver => DISTANCE.defaultValue &lt; maneuver.distance
+			)
+			||
+			theTravelNotesData.travel.editedRoute.itinerary.maneuvers.first;
+		previousManeuver.distance +=
+			theTravelNotesData.travel.editedRoute.itinerary.maneuvers.getAt ( maneuverObjId ).distance;
+		theTravelNotesData.travel.editedRoute.itinerary.maneuvers.remove ( maneuverObjId );
+		theEventDispatcher.dispatch ( 'showitinerary' );
+		theEventDispatcher.dispatch ( 'roadbookupdate' );
+	}
+
+	/**
+	This method save the route to a gpx file
+	@param {!number} routeObjId The objId of the Route to save.
+	*/
+
+	saveGpx ( routeObjId ) {
+		newGpxFactory ( ).routeToGpx ( routeObjId );
+	}
+
+	/**
+	This method recompute the distances for all the chained routes and their notes
+	*/
+
+	chainRoutes ( ) {
+		ourChainRoutes ( );
+	}
+
+	/**
+	This method start the routing for the edited route.
+	@async
+	@fires routeupdated
+	@fires showitinerary
+	@fires roadbookupdate
+	*/
+
+	startRouting ( ) {
+		if (
+			theConfig.routing.auto
+			&amp;&amp;
+			! ourRoutingRequestStarted
+			&amp;&amp;
+			ourHaveValidWayPoints ( theTravelNotesData.travel.editedRoute )
+		) {
+			ourMustZoomToRouteAfterRouting = ZERO === theTravelNotesData.travel.editedRoute.itinerary.itineraryPoints.length;
+			ourRoutingRequestStarted = true;
+			let routeProvider = theTravelNotesData.providers.get ( theTravelNotesData.routing.provider.toLowerCase ( ) );
+			theTravelNotesData.travel.editedRoute.itinerary.provider = routeProvider.name;
+			theTravelNotesData.travel.editedRoute.itinerary.transitMode = theTravelNotesData.routing.transitMode;
+			routeProvider.getPromiseRoute ( theTravelNotesData.travel.editedRoute, null )
+				.then ( ourOnRoutingOk )
+				.catch ( ourOnRoutingError );
+		}
+	}
+
+	/**
+	This method save the edited route
+	@fires routeupdated
+	@fires showitinerary
+	@fires setrouteslist
+	@fires roadbookupdate
+	*/
+
+	saveEdition ( ) {
+
+		// the edited route is cloned
+		let clonedRoute = newRoute ( );
+		clonedRoute.jsonObject = theTravelNotesData.travel.editedRoute.jsonObject;
+
+		// and the initial route replaced with the clone
+		theTravelNotesData.travel.routes.replace ( theTravelNotesData.editedRouteObjId, clonedRoute );
+		theTravelNotesData.editedRouteObjId = clonedRoute.objId;
+		this.cancelEdition ( );
+	}
+
+	/**
+	This method cancel the route edition
+	@fires routeupdated
+	@fires showitinerary
+	@fires setrouteslist
+	@fires roadbookupdate
+	*/
+
+	cancelEdition ( ) {
+
+		// !!! order is important!!!
+		let editedRoute = theDataSearchEngine.getRoute ( theTravelNotesData.editedRouteObjId );
+		editedRoute.editionStatus = ROUTE_EDITION_STATUS.notEdited;
+
+		theProfileWindowsManager.updateProfile (
+			theTravelNotesData.travel.editedRoute.objId,
+			editedRoute
+		);
+
+		theEventDispatcher.dispatch (
+			'routeupdated',
+			{
+				removedRouteObjId : theTravelNotesData.travel.editedRoute.objId,
+				addedRouteObjId : theTravelNotesData.editedRouteObjId
+			}
+		);
+
+		theTravelNotesData.editedRouteObjId = INVALID_OBJ_ID;
+		theTravelNotesData.travel.editedRoute = newRoute ( );
+		ourChainRoutes ( );
+
+		theEventDispatcher.dispatch ( 'roadbookupdate' );
+		theEventDispatcher.dispatch ( 'setrouteslist' );
+		theEventDispatcher.dispatch ( 'showitinerary' );
+	}
+
+	/**
+	This method show the RoutePropertiesDialog
+	@param {!number} routeObjId The objId of the Route for witch the properties must be edited
+	@async
+	@fires routepropertiesupdated
+	@fires setrouteslist
+	@fires roadbookupdate
+	@fires updateitinerary
+	*/
+
+	routeProperties ( routeObjId ) {
+		let route = theDataSearchEngine.getRoute ( routeObjId );
+		let routePropertiesDialog = newRoutePropertiesDialog ( route );
+
+		routePropertiesDialog.show ( ).then (
+			( ) => {
+				ourChainRoutes ( );
+				if ( ourHaveValidWayPoints ( route ) ) {
+					theEventDispatcher.dispatch (
+						'routepropertiesupdated',
+						{
+							routeObjId : route.objId
+						}
+					);
+				}
+				theEventDispatcher.dispatch ( 'roadbookupdate' );
+				theEventDispatcher.dispatch ( 'setrouteslist' );
+				theEventDispatcher.dispatch ( 'updateitinerary' );
+			}
+		)
+			.catch ( err => console.log ( err ? err : 'An error occurs in the route properties dialog' ) );
+	}
+
+	/**
+	This method show the PrintRouteMapDialog and then print the maps
+	@param {!number} routeObjId The objId of the Route for witch the maps must be printed
+	@async
+	*/
+
+	printRouteMap ( routeObjId ) {
+		newPrintRouteMapDialog ( )
+			.show ( )
+			.then ( printData => newPrintFactory ( ).print ( printData, routeObjId ) )
+			.catch ( err => console.log ( err ? err : 'An error occurs in the route properties dialog' ) );
+	}
+
+	/**
+	This method show a route on the map
+	@param {!number} routeObjId The objId of the Route to show
+	*/
+
+	showRoute ( routeObjId ) {
+		theDataSearchEngine.getRoute ( routeObjId ).hidden = false;
+		theEventDispatcher.dispatch (
+			'routeupdated',
+			{
+				removedRouteObjId : INVALID_OBJ_ID,
+				addedRouteObjId : routeObjId
+			}
+		);
+		theEventDispatcher.dispatch ( 'setrouteslist' );
+	}
+
+	/**
+	This method hide a route on the map
+	@param {!number} routeObjId The objId of the Route to show
+	*/
+
+	hideRoute ( routeObjId ) {
+		theDataSearchEngine.getRoute ( routeObjId ).hidden = true;
+		theEventDispatcher.dispatch (
+			'routeupdated',
+			{
+				removedRouteObjId : routeObjId,
+				addedRouteObjId : INVALID_OBJ_ID
+			}
+		);
+		theEventDispatcher.dispatch ( 'setrouteslist' );
+	}
+
+	/**
+	This method shows all the routes on the map
+	*/
+
+	showRoutes ( ) {
+		let routesIterator = theTravelNotesData.travel.routes.iterator;
+		while ( ! routesIterator.done ) {
+			if ( routesIterator.value.hidden ) {
+				routesIterator.value.hidden = false;
+				theEventDispatcher.dispatch (
+					'routeupdated',
+					{
+						removedRouteObjId : INVALID_OBJ_ID,
+						addedRouteObjId : routesIterator.value.objId
+					}
+				);
+			}
+		}
+		theEventDispatcher.dispatch ( 'setrouteslist' );
+	}
+
+	/**
+	This method hide all the routes on the map
+	*/
+
+	hideRoutes ( ) {
+		let routesIterator = theTravelNotesData.travel.routes.iterator;
+		while ( ! routesIterator.done ) {
+			if (
+				! routesIterator.value.hidden
+				&amp;&amp;
+				routesIterator.value.objId !== theTravelNotesData.editedRouteObjId
+			) {
+				routesIterator.value.hidden = true;
+				theEventDispatcher.dispatch (
+					'routeupdated',
+					{
+						removedRouteObjId : routesIterator.value.objId,
+						addedRouteObjId : INVALID_OBJ_ID
+					}
+				);
+			}
+		}
+		theEventDispatcher.dispatch ( 'setrouteslist' );
+	}
+}
+
+const ourRouteEditor = Object.seal ( new RouteEditor );
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@desc The one and only one instance of RouteEditor class
+	@type {RouteEditor}
+	@constant
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourRouteEditor as theRouteEditor
+};
+
+/*
+--- End of RouteEditor.js file ------------------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:02 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

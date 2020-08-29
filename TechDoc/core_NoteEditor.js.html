@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: core/NoteEditor.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: core/NoteEditor.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/*
+Changes:
+	- v1.0.0:
+		- created
+	- v1.4.0:
+		- Replacing DataManager with TravelNotesData, Config, Version and DataSearchEngine
+		- added newSearchNote method and modified endNoteDialog for update of the travel note pane
+		- added attachNoteToRoute and detachNoteFromRoute methods
+	- v1.5.0:
+		- Issue #52 : when saving the travel to the file, save also the edited route.
+	- v1.6.0:
+		- Issue #65 : Time to go to ES6 modules?
+		- Issue #66 : Work with promises for dialogs
+		- Issue #70 : Put the get...HTML functions outside of the editors
+		- Issue #68 : Review all existing promises.
+	- v1.11.0:
+		- Issue #110 : Add a command to create a SVG icon from osm for each maneuver
+	- v1.12.0:
+		- Issue #120 : Review the UserInterface
+Doc reviewed 20200803
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file NoteEditor.js
+@copyright Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module NoteEditor
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+import { theTranslator } from '../UI/Translator.js';
+import { theTravelNotesData } from '../data/TravelNotesData.js';
+import { newNoteDialog } from '../dialogs/NoteDialog.js';
+import { newNote } from '../data/Note.js';
+import { theDataSearchEngine } from '../data/DataSearchEngine.js';
+import { theEventDispatcher } from '../util/EventDispatcher.js';
+import { theGeometry } from '../util/Geometry.js';
+import { newSvgIconFromOsmFactory } from '../core/SvgIconFromOsmFactory.js';
+import { theConfig } from '../data/Config.js';
+import { newWaitUI } from '../UI/WaitUI.js';
+import { newTwoButtonsDialog } from '../dialogs/TwoButtonsDialog.js';
+import { theErrorsUI } from '../UI/ErrorsUI.js';
+
+import { ZERO, ONE, DISTANCE, INVALID_OBJ_ID, ICON_DIMENSIONS } from '../util/Constants.js';
+
+let ourWaitUI = null;
+let ourManeuverCounter = ZERO;
+let ourManeuverLength = ZERO;
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourNewNoteFromOsmData
+@desc This function creates a new route note with data from osm
+@param {OsmNoteData} osmNoteData The osm data needed for the note
+@param {Route} route The route to witch the note will be attached
+@fires noteupdated
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourNewNoteFromOsmData ( osmNoteData, route ) {
+	let note = newNote ( );
+	note.iconContent = osmNoteData.svg.outerHTML;
+	note.popupContent = '';
+	note.iconWidth = ICON_DIMENSIONS.width;
+	note.iconHeight = ICON_DIMENSIONS.height;
+	note.tooltipContent = osmNoteData.tooltip;
+	note.address = osmNoteData.streets;
+	if ( '' !== osmNoteData.city ) {
+		note.address += ' ' + theConfig.note.cityPrefix + osmNoteData.city + theConfig.note.cityPostfix;
+	}
+	if ( osmNoteData.place &amp;&amp; osmNoteData.place !== osmNoteData.city ) {
+		note.address += ' (' + osmNoteData.place + ')';
+	}
+	note.latLng = osmNoteData.latLng;
+	note.iconLatLng = osmNoteData.latLng;
+	note.distance = theGeometry.getClosestLatLngDistance ( route, note.latLng ).distance;
+	note.chainedDistance = route.chainedDistance;
+	route.notes.add ( note );
+	theEventDispatcher.dispatch (
+		'noteupdated',
+		{
+			removedNoteObjId : INVALID_OBJ_ID,
+			addedNoteObjId : note.objId
+		}
+	);
+	theEventDispatcher.dispatch ( 'roadbookupdate' );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourAddAllManeuverNote
+@desc This method add a note with data from osm for each maneuver of a route. This function is recursive!
+@param {CollectionIterator} maneuverIterator an iterator on the maneuvers
+@param {Route} route The route to witch the notes will be attached
+@fires updateitinerary
+@fires roadbookupdate
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourAddAllManeuverNote ( maneuverIterator, route ) {
+
+	function endAdd ( ) {
+		if ( maneuverIterator.done ) {
+			route.notes.sort (
+				( first, second ) => first.distance - second.distance
+			);
+			theEventDispatcher.dispatch ( 'updateitinerary' );
+			theEventDispatcher.dispatch ( 'roadbookupdate' );
+			ourWaitUI.close ( );
+			ourWaitUI = null;
+		}
+		else {
+			ourAddAllManeuverNote ( maneuverIterator, route );
+		}
+	}
+
+	ourWaitUI.showInfo (
+		theTranslator.getText (
+			'NoteEditor - Creating note',
+			{ noteNumber : ourManeuverCounter, notesLength : ourManeuverLength }
+		)
+	);
+	if (
+		( 'kDepartDefault' === maneuverIterator.value.iconName &amp;&amp; ! maneuverIterator.first )
+		||
+		( 'kArriveDefault' === maneuverIterator.value.iconName &amp;&amp; ! maneuverIterator.last )
+	) {
+		endAdd ( );
+	}
+	else {
+		ourManeuverCounter ++;
+		let latLng = route.itinerary.itineraryPoints.getAt ( maneuverIterator.value.itineraryPointObjId ).latLng;
+		newSvgIconFromOsmFactory ( ).getPromiseIconAndAdress ( latLng, route.objId )
+			.then (
+				osmNoteData => {
+					ourNewNoteFromOsmData ( osmNoteData, route );
+					endAdd ( );
+				}
+			)
+			.catch (
+				err => {
+					console.log ( err ? err : 'an error occurs when creating the SVG icon.' );
+					endAdd ( );
+				}
+			);
+	}
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourNoteDialog
+@desc This method show the Note dialog and then add or update the note
+@param {Note} note the Note to be added or updated
+@param {!number} routeObjId The route objId to witch the note will be attached (= INVALID_OBJ_ID for a travel note)
+@param {boolean} isNewNote when true the note will be added, otherwise updated
+@fires showtravelnotes
+@fires showitinerary
+@fires noteupdated
+@fires roadbookupdate
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourNoteDialog ( note, routeObjId, isNewNote ) {
+	newNoteDialog ( note, routeObjId, isNewNote )
+		.show ( )
+		.then (
+			( ) => {
+				if ( isNewNote ) {
+					if ( INVALID_OBJ_ID === routeObjId ) {
+						theTravelNotesData.travel.notes.add ( note );
+						theEventDispatcher.dispatch ( 'showtravelnotes' );
+					}
+					else {
+						let route = theDataSearchEngine.getRoute ( routeObjId );
+						route.notes.add ( note );
+						note.chainedDistance = route.chainedDistance;
+						route.notes.sort (
+							( first, second ) => first.distance - second.distance
+						);
+						theEventDispatcher.dispatch ( 'showitinerary' );
+					}
+				}
+				else if ( INVALID_OBJ_ID === routeObjId ) {
+					theEventDispatcher.dispatch ( 'updatetravelnotes' );
+				}
+				else {
+					theEventDispatcher.dispatch ( 'updateitinerary' );
+				}
+				theEventDispatcher.dispatch (
+					'noteupdated',
+					{
+						removedNoteObjId : note.objId,
+						addedNoteObjId : note.objId
+					}
+				);
+				theEventDispatcher.dispatch ( 'roadbookupdate' );
+			}
+		)
+		.catch ( err => console.log ( err ? err : 'An error occurs in the note dialog' ) );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourNewNote
+@desc This method construct a new Note object
+@param {Array.&lt;number>} latLng The latitude and longitude of the note
+@return {Note} A new note object with the lat and lng completed
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourNewNote ( latLng ) {
+	let note = newNote ( );
+	note.latLng = latLng;
+	note.iconLatLng = latLng;
+	return note;
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class
+@classdesc This class contains all the needed methods fot Notes creation or modifications
+@see {@link theNoteEditor} for the one and only one instance of this class
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+class NoteEditor {
+
+	/**
+	This method add a note with data from osm for each maneuver of a route
+	A confirmation message is showed before starting.
+	@param {!number} routeObjId The Route objId
+	@fires updateitinerary
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	addAllManeuverNotes ( routeObjId ) {
+		let route = theDataSearchEngine.getRoute ( routeObjId );
+		let maneuverIterator = route.itinerary.maneuvers.iterator;
+		ourManeuverLength = ZERO;
+		while ( ! maneuverIterator.done ) {
+			if (
+				! ( 'kDepartDefault' === maneuverIterator.value.iconName &amp;&amp; ! maneuverIterator.first )
+				&amp;&amp;
+				! ( 'kArriveDefault' === maneuverIterator.value.iconName &amp;&amp; ! maneuverIterator.last )
+			) {
+				ourManeuverLength ++;
+			}
+		}
+
+		if ( theConfig.note.maxManeuversNotes &lt; ourManeuverLength ) {
+			theErrorsUI.showError (
+				theTranslator.getText ( 'NoteEditor - max maneuvers notes reached {maneuversLength}{maxManeuversNotes}',
+					{ maneuversLength : ourManeuverLength, maxManeuversNotes : theConfig.note.maxManeuversNotes } )
+			);
+			return;
+		}
+
+		newTwoButtonsDialog (
+			{
+				title : theTranslator.getText ( 'NoteEditor - Add a note for each maneuver' ),
+				textContent : theTranslator.getText (
+					'NoteEditor - Add a note for each maneuver. Are you sure?',
+					{ noteLength : ourManeuverLength }
+				),
+				secondButtonContent : '&amp;#x274C'
+			}
+		)
+			.show ( )
+			.then (
+				( ) => {
+					maneuverIterator = route.itinerary.maneuvers.iterator;
+					if ( ! maneuverIterator.done ) {
+						ourWaitUI = newWaitUI ( );
+						ourWaitUI.createUI ( );
+						ourManeuverCounter = ONE;
+						ourAddAllManeuverNote ( maneuverIterator, route );
+					}
+				}
+			)
+			.catch ( err => console.log ( err ? err : 'An error occurs in the note dialog' ) );
+	}
+
+	/**
+	This method add a route note.
+	@param {!number} routeObjId The Route objId
+	@param {event} contextMenuEvent the event that have lauched the method
+	(a context menu event on the route on the map)
+	@fires showitinerary
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	newRouteNote ( routeObjId, contextMenuEvent ) {
+		let route = theDataSearchEngine.getRoute ( routeObjId );
+
+		// the nearest point and distance on the route is searched
+		let latLngDistance = theGeometry.getClosestLatLngDistance (
+			route,
+			[ contextMenuEvent.latlng.lat, contextMenuEvent.latlng.lng ]
+		);
+
+		// the note is created
+		let note = ourNewNote ( latLngDistance.latLng );
+		note.distance = latLngDistance.distance;
+
+		ourNoteDialog ( note, route.objId, true );
+	}
+
+	/**
+	This method add a note for a searh result from osm.
+	@param {Object} searchResult A search result. See osmSearch plugin for more...
+	@fires showtravelnotes
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	newSearchNote ( searchResult ) {
+		let note = ourNewNote ( [ searchResult.lat, searchResult.lon ] );
+
+		note.address =
+			( searchResult.tags [ 'addr:housenumber' ] ? searchResult.tags [ 'addr:housenumber' ] + ' ' : '' ) +
+			( searchResult.tags [ 'addr:street' ] ? searchResult.tags [ 'addr:street' ] + ' ' : '' ) +
+			( searchResult.tags [ 'addr:city' ] ? searchResult.tags [ 'addr:city' ] + ' ' : '' );
+
+		note.url = searchResult.tags.website || '';
+		note.phone = searchResult.tags.phone || '';
+		note.tooltipContent = searchResult.tags.name || '';
+		note.popupContent = searchResult.tags.name || '';
+
+		ourNoteDialog ( note, INVALID_OBJ_ID, true );
+	}
+
+	/**
+	This method add a note with data from osm for a maneuver
+	@param {!number} maneuverObjId The objId of the maneuver
+	@fires showitinerary
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	newManeuverNote ( maneuverObjId ) {
+		ourWaitUI = newWaitUI ( );
+		ourWaitUI.createUI ( );
+		let route = theTravelNotesData.travel.editedRoute;
+		let maneuver = route.itinerary.maneuvers.getAt ( maneuverObjId );
+		let latLng = route.itinerary.itineraryPoints.getAt ( maneuver.itineraryPointObjId ).latLng;
+		newSvgIconFromOsmFactory ( ).getPromiseIconAndAdress ( latLng, route.objId )
+			.then (
+				osmNoteData => {
+					ourNewNoteFromOsmData ( osmNoteData, route );
+					route.notes.sort (
+						( first, second ) => first.distance - second.distance
+					);
+					route.itinerary.maneuvers.remove ( maneuverObjId );
+					theEventDispatcher.dispatch ( 'showitinerary' );
+					theEventDispatcher.dispatch ( 'roadbookupdate' );
+					ourWaitUI.close ( );
+					ourWaitUI = null;
+				}
+			)
+			.catch (
+				err => {
+					console.log ( err ? err : 'an error occurs when creating the SVG icon.' );
+					ourWaitUI.close ( );
+					ourWaitUI = null;
+				}
+			);
+	}
+
+	/**
+	This method add a travel note
+	@param {Array.&lt;number>} latLng The latitude and longitude of the note
+	@fires showtravelnotes
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	newTravelNote ( latLng ) {
+		let note = ourNewNote ( latLng );
+		ourNoteDialog ( note, INVALID_OBJ_ID, true );
+	}
+
+	/**
+	This method start the edition of a note
+	@param {!number} noteObjId The objId of the note to be edited
+	@fires showtravelnotes
+	@fires showitinerary
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	editNote ( noteObjId ) {
+		let noteAndRoute = theDataSearchEngine.getNoteAndRoute ( noteObjId );
+		let routeObjId = null === noteAndRoute.route ? INVALID_OBJ_ID : noteAndRoute.route.objId;
+		ourNoteDialog ( noteAndRoute.note, routeObjId, false );
+	}
+
+	/**
+	This method remove a note
+	@param {!number} noteObjId The objId of the note to be removed
+	@fires updateitinerary
+	@fires updatetravelnotes
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	removeNote ( noteObjId ) {
+
+		// the note and the route are searched
+		let noteAndRoute = theDataSearchEngine.getNoteAndRoute ( noteObjId );
+		if ( noteAndRoute.route ) {
+
+			// it's a route note
+			noteAndRoute.route.notes.remove ( noteObjId );
+			theEventDispatcher.dispatch ( 'updateitinerary' );
+		}
+		else {
+
+			// it's a travel note
+			theTravelNotesData.travel.notes.remove ( noteObjId );
+			theEventDispatcher.dispatch ( 'updatetravelnotes' );
+		}
+		theEventDispatcher.dispatch (
+			'noteupdated',
+			{
+				removedNoteObjId : noteObjId,
+				addedNoteObjId : INVALID_OBJ_ID
+			}
+		);
+		theEventDispatcher.dispatch ( 'roadbookupdate' );
+	}
+
+	/**
+	This method hide all notes on the map. The notes are always visible in the roadbook and UI
+	@fires removeobject
+	*/
+
+	hideNotes ( ) {
+		let notesIterator = theTravelNotesData.travel.notes.iterator;
+		while ( ! notesIterator.done ) {
+			theEventDispatcher.dispatch ( 'removeobject', { objId : notesIterator.value.objId } );
+		}
+		let routesIterator = theTravelNotesData.travel.routes.iterator;
+		while ( ! routesIterator.done ) {
+			notesIterator = routesIterator.value.notes.iterator;
+			while ( ! notesIterator.done ) {
+				theEventDispatcher.dispatch ( 'removeobject', { objId : notesIterator.value.objId } );
+			}
+		}
+		if ( INVALID_OBJ_ID !== theTravelNotesData.editedRouteObjId ) {
+			notesIterator = theTravelNotesData.travel.editedRoute.notes.iterator;
+			while ( ! notesIterator.done ) {
+				theEventDispatcher.dispatch ( 'removeobject', { objId : notesIterator.value.objId } );
+			}
+		}
+	}
+
+	/**
+	This method show all notes on the map.
+	@fires noteupdated
+	@fires routeupdated
+	*/
+
+	showNotes ( ) {
+		this.hideNotes ( );
+		let notesIterator = theTravelNotesData.travel.notes.iterator;
+		while ( ! notesIterator.done ) {
+			theEventDispatcher.dispatch (
+				'noteupdated',
+				{
+					removedNoteObjId : INVALID_OBJ_ID,
+					addedNoteObjId : notesIterator.value.objId
+				}
+			);
+		}
+		let routesIterator = theTravelNotesData.travel.routes.iterator;
+		while ( ! routesIterator.done ) {
+			if ( ! routesIterator.value.hidden ) {
+				theEventDispatcher.dispatch (
+					'routeupdated',
+					{
+						removedRouteObjId : routesIterator.value.objId,
+						addedRouteObjId : routesIterator.value.objId
+					}
+				);
+			}
+		}
+	}
+
+	/**
+	This method transform a travel note into a route note.
+	The nearest point on a route is selected for the note
+	@param {!number} noteObjId The objId of the note
+	@fires updateitinerary
+	@fires updatetravelnotes
+	@fires noteupdated
+	@fires roadbookupdate
+	*/
+
+	attachNoteToRoute ( noteObjId ) {
+		let noteAndRoute = theDataSearchEngine.getNoteAndRoute ( noteObjId );
+		let distance = Number.MAX_VALUE;
+		let selectedRoute = null;
+		let newNoteLatLng = null;
+		let newNoteDistance = null;
+		theTravelNotesData.travel.routes.forEach (
+			route => {
+				let pointAndDistance = theGeometry.getClosestLatLngDistance ( route, noteAndRoute.note.latLng );
+				if ( pointAndDistance ) {
+					let distanceToRoute = theGeometry.pointsDistance (
+						noteAndRoute.note.latLng,
+						pointAndDistance.latLng
+					);
+					if ( distanceToRoute &lt; distance ) {
+						distance = distanceToRoute;
+						selectedRoute = route;
+						newNoteLatLng = pointAndDistance.latLng;
+						newNoteDistance = pointAndDistance.distance;
+					}
+				}
+			}
+		);
+
+		if ( selectedRoute ) {
+			theTravelNotesData.travel.notes.remove ( noteObjId );
+			noteAndRoute.note.distance = newNoteDistance;
+			noteAndRoute.note.latLng = newNoteLatLng;
+			noteAndRoute.note.chainedDistance = selectedRoute.chainedDistance;
+			selectedRoute.notes.add ( noteAndRoute.note );
+			selectedRoute.notes.sort (
+				( first, second ) => first.distance - second.distance
+			);
+
+			theEventDispatcher.dispatch (
+				'noteupdated',
+				{
+					removedNoteObjId : noteObjId,
+					addedNoteObjId : noteObjId
+				}
+			);
+			theEventDispatcher.dispatch ( 'updateitinerary' );
+			theEventDispatcher.dispatch ( 'updatetravelnotes' );
+			theEventDispatcher.dispatch ( 'roadbookupdate' );
+		}
+	}
+
+	/**
+	This method transform a route note into a travel note.
+	@param {!number} noteObjId The objId of the note
+	@fires updateitinerary
+	@fires updatetravelnotes
+	@fires roadbookupdate
+	*/
+
+	detachNoteFromRoute ( noteObjId ) {
+		let noteAndRoute = theDataSearchEngine.getNoteAndRoute ( noteObjId );
+		noteAndRoute.route.notes.remove ( noteObjId );
+		noteAndRoute.note.distance = DISTANCE.invalid;
+		noteAndRoute.note.chainedDistance = DISTANCE.defaultValue;
+		theTravelNotesData.travel.notes.add ( noteAndRoute.note );
+
+		theEventDispatcher.dispatch ( 'updateitinerary' );
+		theEventDispatcher.dispatch ( 'updatetravelnotes' );
+		theEventDispatcher.dispatch ( 'roadbookupdate' );
+	}
+
+	/**
+	This method is called when a note is dropped in the TravelNotesPaneUI and then notes reordered.
+	@param {!number} draggedNoteObjId The objId of the dragged note
+	@param {!number} targetNoteObjId The objId of the note on witch the drop was executed
+	@param {boolean} draggedBefore when true the dragged note is moved before the target note
+	when false after
+	@fires updatetravelnotes
+	@fires roadbookupdate
+	*/
+
+	travelNoteDropped ( draggedNoteObjId, targetNoteObjId, draggedBefore ) {
+		theTravelNotesData.travel.notes.moveTo ( draggedNoteObjId, targetNoteObjId, draggedBefore );
+		theEventDispatcher.dispatch ( 'updatetravelnotes' );
+		theEventDispatcher.dispatch ( 'roadbookupdate' );
+	}
+}
+
+const ourNoteEditor = Object.seal ( new NoteEditor );
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@desc The one and only one instance of NoteEditor class
+	@type {NoteEditor}
+	@constant
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourNoteEditor as theNoteEditor
+};
+
+/*
+--- End of NoteEditor.js file -------------------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:02 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

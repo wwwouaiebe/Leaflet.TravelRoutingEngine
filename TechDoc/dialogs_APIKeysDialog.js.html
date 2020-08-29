@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: dialogs/APIKeysDialog.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: dialogs/APIKeysDialog.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/*
+Changes:
+	- v1.6.0:
+		- created
+	- v1.10.0:
+		- Issue #107 : Add a button to reload the APIKeys file in the API keys dialog
+	- v1.11.0:
+		- Issue #108 : Add a warning when an error occurs when reading the APIKeys file at startup reopened
+	- v1.11.0:
+		- Issue #113 : When more than one dialog is opened, using thr Esc or Return key close all the dialogs
+Doc reviewed 20200812
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file APIKeysDialog.js
+@copyright Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module APIKeysDialog
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+import { theTranslator } from '../UI/Translator.js';
+import { theConfig } from '../data/Config.js';
+import { newBaseDialog } from '../dialogs/BaseDialog.js';
+import { newPasswordDialog } from '../dialogs/PasswordDialog.js';
+import { theHTMLElementsFactory } from '../util/HTMLElementsFactory.js';
+import { theUtilities } from '../util/Utilities.js';
+import { newDataEncryptor } from '../util/DataEncryptor.js';
+import { theErrorsUI } from '../UI/ErrorsUI.js';
+import { theHttpRequestBuilder } from '../util/HttpRequestBuilder.js';
+import { ZERO, ONE } from '../util/Constants.js';
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourNewAPIKeysDialog
+@desc constructor for APIKeysDialog objects
+@param {Array.&lt;APIKey>} APIKeys
+@return {APIKeysDialog} an instance of APIKeysDialog object
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourNewAPIKeysDialog ( APIKeys ) {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@class APIKeysDialog
+	@classdesc a BaseDialog object completed for API keys
+	@see {@link newAPIKeysDialog} for constructor
+	@augments BaseDialog
+	@hideconstructor
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	let myAPIKeysDialog = null;
+	let myToolbarDiv = null;
+	let myAPIKeysDiv = null;
+	let myOpenSecureFileInput = null;
+	let myOpenUnsecureFileInput = null;
+	let myReloadKeysFromServerFileButton = null;
+	let mySaveKeysToSecureFileButton = null;
+	let myRestoreKeysFromSecureFileButton = null;
+	let myAddNewKeyButton = null;
+	let mySaveKeysToUnsecureFileButton = null;
+	let myRestoreKeysFromUnsecureFileButton = null;
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myGetAPIKeys
+	@desc This method returns the API keys
+	@return {Array.&lt;APIKey>}  An array with the API keys
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myGetAPIKeys ( ) {
+		let dlgAPIKeys = [];
+		let rows = myAPIKeysDiv.childNodes;
+		for ( let counter = ZERO; counter &lt; rows.length; counter ++ ) {
+			dlgAPIKeys.push (
+				{
+					providerName : rows [ counter ].childNodes [ ZERO ].value,
+					providerKey : rows [ counter ].childNodes [ ONE ].value
+				}
+			);
+		}
+		return dlgAPIKeys;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myVerifyKeys
+	@desc This method validates the API keys
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myVerifyKeys ( ) {
+		let returnValue = true;
+		myAPIKeysDialog.hideError ( );
+		let rows = myAPIKeysDiv.childNodes;
+		for ( let counter = ZERO; counter &lt; rows.length; counter ++ ) {
+			returnValue = returnValue &amp;&amp; '' !== rows [ counter ].childNodes [ ZERO ].value;
+			returnValue = returnValue &amp;&amp; '' !== rows [ counter ].childNodes [ ONE ].value;
+		}
+		if ( ! returnValue ) {
+			myAPIKeysDialog.showError ( theTranslator.getText ( 'APIKeysDialog - empty API key name or value' ) );
+		}
+
+		return returnValue;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnDeleteApiKeyRowButton
+	@desc Event listener for the delete API key buttons
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnDeleteApiKeyRowButton ( clickEvent ) {
+		clickEvent.stopPropagation ( );
+		clickEvent.target.parentNode.parentNode.removeChild ( clickEvent.target.parentNode );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateAPIKeyRow
+	@desc This method creates a row in the API keys list
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateAPIKeyRow ( APIKey ) {
+		let APIKeyRow = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-APIKeysDialog-ApiKeyRow'
+			},
+			myAPIKeysDiv
+		);
+		theHTMLElementsFactory.create (
+			'input',
+			{
+				className : 'TravelNotes-APIKeysDialog-ApiKeyName TravelNotes-APIKeysDialog-Input',
+				value : APIKey.providerName,
+				placeholder : theTranslator.getText ( 'APIKeysDialog - provider name' )
+			},
+			APIKeyRow
+		);
+		theHTMLElementsFactory.create (
+			'input',
+			{
+				className : 'TravelNotes-APIKeysDialog-ApiKeyValue TravelNotes-APIKeysDialog-Input',
+				value : APIKey.providerKey,
+				placeholder : theTranslator.getText ( 'APIKeysDialog - API key' ),
+				type : theConfig.APIKeys.showAPIKeysInDialog ? 'text' : 'password'
+			},
+			APIKeyRow
+		);
+
+		theHTMLElementsFactory.create (
+			'div',
+			{
+				className :
+					'TravelNotes-BaseDialog-Button ' +
+					'TravelNotes-APIKeysDialog-AtRightButton TravelNotes-APIKeysDialog-DeleteRowButton',
+				title : theTranslator.getText ( 'APIKeysDialog - delete API key' ),
+				innerHTML : '&amp;#x274c' // 274c = ❌
+			},
+			APIKeyRow
+		)
+			.addEventListener ( 'click', myOnDeleteApiKeyRowButton, false );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnErrorDecrypt
+	@desc Error handler for the DataEncryptor
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnErrorDecrypt ( err ) {
+		myAPIKeysDialog.hideWait ( );
+		myAPIKeysDialog.keyboardEventListenerEnabled = true;
+		if ( err &amp;&amp; 'Canceled by user' !== err ) {
+			myAPIKeysDialog.showError ( theTranslator.getText ( 'APIKeysDialog - An error occurs when reading the file' ) );
+		}
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnOkDecrypt
+	@desc Succes handler for the DataEncryptor on decrypt
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnOkDecrypt ( data ) {
+		let decryptedAPIKeys = null;
+		try {
+			decryptedAPIKeys = JSON.parse ( new TextDecoder ( ).decode ( data ) );
+		}
+		catch ( err ) {
+			myOnErrorDecrypt ( err );
+			return;
+		}
+		while ( myAPIKeysDiv.firstChild ) {
+			myAPIKeysDiv.removeChild ( myAPIKeysDiv.firstChild );
+		}
+		decryptedAPIKeys.forEach ( APIKey => myCreateAPIKeyRow ( APIKey ) );
+		myAPIKeysDialog.hideWait ( );
+		myAPIKeysDialog.hideError ( );
+		myAPIKeysDialog.keyboardEventListenerEnabled = true;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnReloadKeysFromServerFileButtonClick
+	@desc Event listener for the reload server file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnReloadKeysFromServerFileButtonClick ( clickEvent ) {
+		clickEvent.stopPropagation ( );
+		myAPIKeysDialog.showWait ( );
+		myAPIKeysDialog.keyboardEventListenerEnabled = false;
+		theHttpRequestBuilder.getBinaryPromise (
+			window.location.href.substr ( ZERO, window.location.href.lastIndexOf ( '/' ) + ONE ) +
+				'APIKeys'
+		)
+			.then (
+				data => {
+					newDataEncryptor ( ).decryptData (
+						data,
+						myOnOkDecrypt,
+						myOnErrorDecrypt,
+						newPasswordDialog ( false ).show ( )
+					);
+				}
+			)
+			.catch (
+				() => {
+					myAPIKeysDialog.showError (
+						theTranslator.getText ( 'APIKeysDialog - An error occurs when loading the APIKeys file' )
+					);
+					myAPIKeysDialog.hideWait ( );
+					myAPIKeysDialog.keyboardEventListenerEnabled = true;
+				}
+			);
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnErrorEncrypt
+	@desc Error handler for the DataEncryptor on encrypt
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnErrorEncrypt ( ) {
+		myAPIKeysDialog.showError ( theTranslator.getText ( 'APIKeysDialog - An error occurs when saving the keys' ) );
+		myAPIKeysDialog.hideWait ( );
+		myAPIKeysDialog.keyboardEventListenerEnabled = true;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnOkEncrypt
+	@desc Succes handler for the DataEncryptor on encrypt
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnOkEncrypt ( data ) {
+		myAPIKeysDialog.hideError ( );
+		myAPIKeysDialog.hideWait ( );
+		let blobUrl = URL.createObjectURL ( data );
+		let element = document.createElement ( 'a' );
+		element.setAttribute ( 'href', blobUrl );
+		element.setAttribute ( 'download', 'APIKeys' );
+		element.style.display = 'none';
+		document.body.appendChild ( element );
+		element.click ( );
+		document.body.removeChild ( element );
+		window.URL.revokeObjectURL ( blobUrl );
+		myAPIKeysDialog.keyboardEventListenerEnabled = true;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnSaveKeysToSecureFileButtonClick
+	@desc Event listener for the save to secure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnSaveKeysToSecureFileButtonClick ( clickEvent ) {
+		clickEvent.stopPropagation ( );
+		myAPIKeysDialog.hideError ( );
+		if ( ! myVerifyKeys ( ) ) {
+			return;
+		}
+		myAPIKeysDialog.showWait ( );
+		myAPIKeysDialog.keyboardEventListenerEnabled = false;
+		newDataEncryptor ( ).encryptData (
+			new window.TextEncoder ( ).encode ( JSON.stringify ( myGetAPIKeys ( ) ) ),
+			myOnOkEncrypt,
+			myOnErrorEncrypt,
+			newPasswordDialog ( true ).show ( )
+		);
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnRestoreKeysFromSecureFileButtonChange
+	@desc Event listener for the restore from secure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnRestoreKeysFromSecureFileButtonChange ( changeEvent ) {
+		myAPIKeysDialog.hideError ( );
+		myAPIKeysDialog.showWait ( );
+		myAPIKeysDialog.keyboardEventListenerEnabled = false;
+		changeEvent.stopPropagation ( );
+		let fileReader = new FileReader ( );
+		fileReader.onload = function ( ) {
+			newDataEncryptor ( ).decryptData (
+				fileReader.result,
+				myOnOkDecrypt,
+				myOnErrorDecrypt,
+				newPasswordDialog ( false ).show ( )
+			);
+		};
+		fileReader.readAsArrayBuffer ( changeEvent.target.files [ ZERO ] );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnOpenSecureFileButtonClick
+	@desc Event listener for the open secure file fake button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnOpenSecureFileButtonClick ( ) {
+		myOpenSecureFileInput.click ( );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnRestoreKeysFromSecureFileButtonChange
+	@desc Event listener for the add new key button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnAddNewKeyButtonClick ( clickEvent ) {
+		clickEvent.stopPropagation ( );
+		myCreateAPIKeyRow ( { providerName : '', providerKey : '' } );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnSaveKeysToUnsecureFileButtonClick
+	@desc Event listener for save keys to unsecure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnSaveKeysToUnsecureFileButtonClick ( clickEvent ) {
+		clickEvent.stopPropagation ( );
+		myAPIKeysDialog.hideError ( );
+		if ( ! myVerifyKeys ( ) ) {
+			return;
+		}
+		theUtilities.saveFile ( 'APIKeys.json', JSON.stringify ( myGetAPIKeys ( ) ) );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnRestoreKeysFromUnecureFileButtonChange
+	@desc Event listener for restore keys from unsecure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnRestoreKeysFromUnecureFileButtonChange ( changeEvent ) {
+		changeEvent.stopPropagation ( );
+		myAPIKeysDialog.hideError ( );
+		let fileReader = new FileReader ( );
+		fileReader.onload = function ( ) {
+			try {
+				let jsonAPIKeys = JSON.parse ( fileReader.result );
+
+				while ( myAPIKeysDiv.firstChild ) {
+					myAPIKeysDiv.removeChild ( myAPIKeysDiv.firstChild );
+				}
+				jsonAPIKeys.forEach ( jsonAPIKey => myCreateAPIKeyRow ( jsonAPIKey ) );
+			}
+			catch ( err ) {
+				myAPIKeysDialog.showError ( err.message );
+				console.log ( err ? err : 'An error occurs when reading the file' );
+			}
+		};
+		fileReader.readAsText ( changeEvent.target.files [ ZERO ] );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnOpenUnsecureFileButtonClick
+	@desc Event listener for the open unsecure file fake button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnOpenUnsecureFileButtonClick ( ) {
+		myOpenUnsecureFileInput.click ( );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myOnOkButtonClick
+	@desc Event listener for the ok button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myOnOkButtonClick ( ) {
+
+		myAPIKeysDialog.hideError ( );
+		if ( ! myVerifyKeys ( ) ) {
+			return;
+		}
+		return myGetAPIKeys ( );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateDialog
+	@desc This method creates the dialog
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateDialog ( ) {
+		myAPIKeysDialog = newBaseDialog ( );
+		myAPIKeysDialog.title = theTranslator.getText ( 'APIKeysDialog - API keys' );
+		myAPIKeysDialog.okButtonListener = myOnOkButtonClick;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateReloadKeysFromServerFileButton
+	@desc This method creates the reload server file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateReloadKeysFromServerFileButton ( ) {
+		myReloadKeysFromServerFileButton = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-BaseDialog-Button',
+				title : theTranslator.getText ( 'APIKeysDialog - Reload from server' ),
+				innerHTML : '&amp;#x1f504;' // 1f504 = 🔄
+			},
+			myToolbarDiv
+		);
+		myReloadKeysFromServerFileButton.addEventListener ( 'click', myOnReloadKeysFromServerFileButtonClick, false );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateSaveKeysToSecureFileButton
+	@desc This method creates the save to secure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateSaveKeysToSecureFileButton ( ) {
+		mySaveKeysToSecureFileButton = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-BaseDialog-Button',
+				title : theTranslator.getText ( 'APIKeysDialog - Save to file' ),
+				innerHTML : '&amp;#x1f4be;' // 1f4be = 💾
+			},
+			myToolbarDiv
+		);
+		mySaveKeysToSecureFileButton.addEventListener ( 'click', myOnSaveKeysToSecureFileButtonClick, false );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateRestoreKeysFromSecureFileButton
+	@desc This method creates the restore from secure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateRestoreKeysFromSecureFileButton ( ) {
+		myOpenSecureFileInput = theHTMLElementsFactory.create (
+			'input',
+			{
+				className : 'TravelNotes-BaseDialog-OpenFileInput',
+				type : 'file'
+			},
+			myToolbarDiv
+		);
+		myOpenSecureFileInput.addEventListener ( 'change', myOnRestoreKeysFromSecureFileButtonChange,	false );
+		myRestoreKeysFromSecureFileButton = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-BaseDialog-Button',
+				title : theTranslator.getText ( 'APIKeysDialog - Open file' ),
+				innerHTML : '&amp;#x1F4C2;' // 1F4C2 = 📂
+			},
+			myToolbarDiv
+		);
+		myRestoreKeysFromSecureFileButton.addEventListener ( 'click', myOnOpenSecureFileButtonClick, false );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateAddNewKeyButton
+	@desc This method creates the add new key button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateAddNewKeyButton ( ) {
+		myAddNewKeyButton = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-BaseDialog-Button',
+				title : theTranslator.getText ( 'APIKeysDialog - new API key' ),
+				innerHTML : '+'
+			},
+			myToolbarDiv
+		);
+		myAddNewKeyButton.addEventListener ( 'click', myOnAddNewKeyButtonClick, false );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateSaveKeysToUnsecureFileButton
+	@desc This method creates the save to unsecure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateSaveKeysToUnsecureFileButton ( ) {
+		mySaveKeysToUnsecureFileButton = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-BaseDialog-Button TravelNotes-APIKeysDialog-AtRightButton',
+				title : theTranslator.getText ( 'APIKeysDialog - Save to json file' ),
+				innerHTML : '&amp;#x1f4be;' // 1f4be = 💾
+			},
+			myToolbarDiv
+		);
+		mySaveKeysToUnsecureFileButton.addEventListener ( 'click', myOnSaveKeysToUnsecureFileButtonClick, false );
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateRestoreKeysFromUnsecureFileButton
+	@desc This method creates the restore from unsecure file button
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateRestoreKeysFromUnsecureFileButton ( ) {
+		myOpenUnsecureFileInput = theHTMLElementsFactory.create (
+			'input',
+			{
+				className : 'TravelNotes-BaseDialog-OpenFileInput',
+				type : 'file'
+			},
+			myToolbarDiv
+		);
+		myOpenUnsecureFileInput.addEventListener ( 'change', myOnRestoreKeysFromUnecureFileButtonChange, false );
+		myRestoreKeysFromUnsecureFileButton = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-BaseDialog-Button',
+				title : theTranslator.getText ( 'APIKeysDialog - Open json file' ),
+				innerHTML : '&amp;#x1F4C2;' // 1F4C2 = 📂
+			},
+			myToolbarDiv
+		);
+		myRestoreKeysFromUnsecureFileButton.addEventListener ( 'click', myOnOpenUnsecureFileButtonClick, false );
+
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateToolbar
+	@desc This method creates the toolbar of the dialog
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateToolbar ( ) {
+		myToolbarDiv = theHTMLElementsFactory.create (
+			'div',
+			{
+				className : 'TravelNotes-APIKeysDialog-ToolbarDiv'
+			},
+			myAPIKeysDialog.content
+		);
+
+		if ( theConfig.haveCrypto ) {
+			myCreateReloadKeysFromServerFileButton ( );
+			myCreateSaveKeysToSecureFileButton ( );
+			myCreateRestoreKeysFromSecureFileButton ( );
+		}
+
+		myCreateAddNewKeyButton ( );
+
+		if ( theConfig.APIKeys.dialogHaveUnsecureButtons ) {
+			myCreateSaveKeysToUnsecureFileButton ( );
+			myCreateRestoreKeysFromUnsecureFileButton ( );
+		}
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateToolbar
+	@desc This method creates the toolbar of the dialog
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateAPIKeysList ( ) {
+		myAPIKeysDiv = theHTMLElementsFactory.create (
+			'div',
+			{
+				id : 'TravelNotes-APIKeysDialog-DataDiv'
+			},
+			myAPIKeysDialog.content
+		);
+		APIKeys.forEach ( APIKey => myCreateAPIKeyRow ( APIKey ) );
+	}
+
+	myCreateDialog ( );
+	myCreateToolbar ( );
+	myCreateAPIKeysList ( );
+
+	theErrorsUI.showHelp ( theTranslator.getText ( 'Help - Complete the APIKeys' ) );
+
+	return myAPIKeysDialog;
+}
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function newAPIKeysDialog
+	@desc constructor for APIKeysDialog objects
+	@param {Array.&lt;APIKey>} APIKeys
+	@return {APIKeysDialog} an instance of APIKeysDialog object
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourNewAPIKeysDialog as newAPIKeysDialog
+};
+
+/*
+--- End of APIKeysDialog.js file --------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:02 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

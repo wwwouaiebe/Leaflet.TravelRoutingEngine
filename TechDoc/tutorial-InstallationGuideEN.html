@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Tutorial: InstallationGuideEN</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Tutorial: InstallationGuideEN</h1>
+
+    <section>
+
+<header>
+    
+
+    <h2>InstallationGuideEN</h2>
+</header>
+
+<article>
+    <h1>Travel &amp; Notes - Installation guide</h1>
+<ul>
+<li><a href="#WhereInstall">Where to install Travel &amp; Notes?</a></li>
+<li><a href="#GuideNull">Installation Guide for Nulls</a></li>
+<li><a href="#GuideGeeks">Installation guide for geeks</a>
+<ul>
+<li><a href="#HtmlPage">What to do in the HTML file?</a></li>
+<li><a href="#MoreOnJS">Some additional explanations on Javascript</a></li>
+<li><a href="#TravelNotesConfigJson">The contents of the TravelNotesConfig.json file</a></li>
+<li><a href="#TravelNotesLayersJson">The contents of the TravelNotesLayers.json file</a></li>
+<li><a href="#TravelNotesNoteDialogJson">The contents of the TravelNotesNoteDialogFR.json and TravelNotesNoteDialogEN.json file</a></li>
+<li><a href="#myTravelNotesNoteDialogJson">The contents of the configuration file that can be loaded with the button :file_folder: in the notes dialog</a></li>
+</ul>
+</li>
+<li><a href="#Viewer">Using the viewer</a></li>
+<li><a href="#Translations">Translations</a></li>
+<li><a href="#Plugins">Plugins</a></li>
+</ul>
+<p><a id="WhereInstall"></a></p>
+<h2>Where to install Travel &amp; Notes?</h2>
+<p>For security reasons, it is no longer possible to use Travel &amp; Notes from a computer disc.
+It is essential to go through either a remote web server, or a local LAMP or MAMP web server.
+See https://www.mozilla.org/en-US/security/advisories/mfsa2019-21/#CVE-2019-11730</p>
+<p><a id="GuideNull"></a></p>
+<h2>Installation Guide for Nulls</h2>
+<p>No great computer skills? If the demo suits you, you can download it by going to the gh-pages branch.
+Still too complicated? follow this
+<a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/archive/gh-pages.zip">link</a>  directly
+which allows you to download the demo.
+Open the zip file and install its contents in a directory on your server and open the
+index.html file. That's all :-).</p>
+<p><a id="GuideGeeks"></a></p>
+<h2>Installation guide for geeks</h2>
+<p><a id="HtmlPage"></a></p>
+<h3>What to do in the HTML file?</h3>
+<p>Travel &amp; Notes uses <a href="http://leafletjs.com/">Leaflet</a> to display the map. You must therefore download
+and install Leaflet.</p>
+<p>In the &lt;head&gt; of the html file, load the Leaflet and TravelNotes stylesheet:</p>
+<pre class="prettyprint source"><code>&lt;head>
+	...
+	&lt;link rel=&quot;stylesheet&quot; href=&quot;leaflet/leaflet.css&quot; />
+	&lt;link rel=&quot;stylesheet&quot; href=&quot;TravelNotes.min.css&quot; />
+	...
+&lt;/head>
+</code></pre>
+<p>And in the &lt;body&gt; load Leaflet, TravelNotes and TravelNotes plugins</p>
+<pre class="prettyprint source"><code>&lt;body>
+	...
+	&lt;script src=&quot;leaflet/leaflet.js&quot;>&lt;/script>
+	&lt;noscript>Oh oh. Javascript is not enabled. It's impossible to display this page without javascript.&lt;/noscript>
+	&lt;script src=&quot;TravelNotes.min.js&quot;>&lt;/script>
+	&lt;!-- route providers scripts for Mapbox, Stadia Maps (MapzenValhalla), GraphHopper and OpenRouteService have only to be installed 
+		if you have an API key for Mapbox, Stadia Maps, GraphHopper or openRouteService -->
+	&lt;!-- route providers scripts for OSRM, public transport and polyline have only to be installed 
+		if you will work with these providers -->
+	&lt;script src=&quot;TravelNotesProviders/MapboxRouteProvider.min.js&quot;>&lt;/script>
+	&lt;script src=&quot;TravelNotesProviders/MapzenValhallaRouteProvider.min.js&quot;>&lt;/script>
+	&lt;script src=&quot;TravelNotesProviders/GraphHopperRouteProvider.min.js&quot;>&lt;/script>
+	&lt;script src=&quot;TravelNotesProviders/OpenRouteServiceRouteProvider.min.js&quot;>&lt;/script>
+	&lt;script src=&quot;TravelNotesProviders/OSRMRouteProvider.min.js&quot;>&lt;/script>
+	&lt;script src=&quot;TravelNotesProviders/PublicTransportRouteProvider.min.js&quot;>&lt;/script>
+	&lt;script src=&quot;TravelNotesProviders/PolylineRouteProvider.min.js&quot;>&lt;/script>
+&lt;/body>
+</code></pre>
+<p>Travel &amp; Notes will automatically create the map and all necessary controls.</p>
+<p><a id="MoreOnJS"></a></p>
+<h3>Some additional explanations on Javascript</h3>
+<p>See the <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TechDoc/index.html">JS code documentation</a>
+for more information.</p>
+<p>Note, however, that only the TravelNotes object is accessible from additional JS code (via window.L.TravelNotes).</p>
+<p>If you want to use other objects, you need to download the sources and import them into your code
+as EcmaScript modules.</p>
+<p><a id="TravelNotesConfigJson"></a></p>
+<h3>The contents of the TravelNotesConfig.json file</h3>
+<p>This file is used to modify certain behavior of TravelNotes. Be careful when editing this file.
+You must follow <strong>all</strong> the rules for writing json files.</p>
+<p>The contents of the TravelNotesConfig.json file:</p>
+<ul>
+<li><strong>autoLoad</strong> : when this value is true, the map and all controls are built automatically when
+Travel &amp; Notes loads</li>
+<li><strong>map.center.lat</strong> : the latitude used for the center of the map during automatic loading</li>
+<li><strong>map.center.lng</strong> : the longitude used for the center of the map during automatic loading</li>
+<li><strong>map.zoom</strong> : the zoom used for the map during automatic loading</li>
+<li><strong>travelNotesToolbarUI.contactMail</strong> : the email address used in the contact button</li>
+<li><strong>layersToolbarUI.haveLayersToolbarUI</strong> : when this value is true, the background maps toolbar is present.</li>
+<li><strong>layersToolbarUI.toolbarTimeOut</strong> : the time that will elapse between the moment when the mouse
+is no longer on the toolbar and the moment when this toolbar closes automatically.</li>
+<li><strong>layersToolbarUI.theDevil.addButton</strong> : when this value is true, a &quot;theDevil&quot; button is added
+to the toolbar.</li>
+<li><strong>layersToolbarUI.theDevil.title</strong> : the tooltip used for the &quot;theDevil&quot; button</li>
+<li><strong>layersToolbarUI.theDevil.text</strong> : the text used for the &quot;theDevil&quot; button</li>
+<li><strong>mouseUI.haveMouseUI</strong> : when this value is true, a control is displayed at the top of the screen,
+indicating the coordinates of the mouse, the zoom value and the name of the open file</li>
+<li><strong>errorUI.timeOut</strong> : the time that will elapse between the time an error message is displayed and the time
+it is cleared</li>
+<li><strong>errorUI.helpTimeOut</strong> : the time that will elapse between the time a help message is displayed and the time
+it is cleared</li>
+<li><strong>errorUI.showError</strong> : when this value is true, error messages are displayed</li>
+<li><strong>errorUI.showWarning</strong> : when this value is true, warning messages are displayed</li>
+<li><strong>errorUI.showInfo</strong> : when this value is true, information messages are displayed</li>
+<li><strong>errorUI.showHelp</strong> : when this value is true, help messages are displayed</li>
+<li><strong>geoLocation.color</strong> : the color of the circle used to indicate the geolocation</li>
+<li><strong>geoLocation.radius</strong> : the radius of the circle used to indicate the geolocation</li>
+<li><strong>geoLocation.zoomToPosition</strong> : when this value is true, Travel &amp; Notes zoom in on the position during
+the first geolocation</li>
+<li><strong>geoLocation.zoomFactor</strong> : the zoom factor used for geolocation</li>
+<li><strong>geoLocation.options.enableHighAccuracy</strong> : see Javascript options for localization functions</li>
+<li><strong>geoLocation.options.maximumAge</strong> : see Javascript options for localization functions</li>
+<li><strong>geoLocation.options.timeout</strong> : see Javascript options for localization functions</li>
+<li><strong>APIKeys.showDialogButton</strong> : when this value is true, the :key: button is present in
+the toolbar</li>
+<li><strong>APIKeys.saveToSessionStorage</strong> : when this value is true, the access keys are saved in the
+'SessionStorage'</li>
+<li><strong>APIKeys.showAPIKeysInDialog</strong> : when this value is true, the access keys can be read in the dialog box</li>
+<li><strong>APIKeys.dialogHaveUnsecureButtons</strong> : when this value is true, buttons to save or restore access keys in
+an unsecured file are present</li>
+<li><strong>contextMenu.timeout</strong> : the time that elapses between the moment when the mouse is no longer
+on the contextual menu and the moment when the menu closes automatically.</li>
+<li><strong>routing.auto</strong> : is not currently used.</li>
+<li><strong>language</strong> : the language used by default in TravelNotes</li>
+<li><strong>itineraryPointMarker.color</strong> : the color of the circle used to indicate on the map the point
+of the route on which the mouse is located.</li>
+<li><strong>itineraryPointMarker.weight</strong> : the weight of the circle used to indicate on the map the point
+of the route on which the mouse is located.</li>
+<li><strong>itineraryPointMarker.radius</strong> : the radius of the circle used to indicate on the map the point
+of the route on which the mouse is located.</li>
+<li><strong>itineraryPointMarker.fill</strong> : the filling of the circle used to indicate on the map the point
+of the route on which the mouse is located.</li>
+<li><strong>searchPointMarker.color</strong> : the color of the circle used to indicate on the map the position
+of a search result, following a click on this result in the control, when this result is in the form
+of a point</li>
+<li><strong>searchPointMarker.weight</strong> : the weight of the circle used to indicate on the map the position
+of a search result, following a click on this result in the control, when this result is in the form
+of a point</li>
+<li><strong>searchPointMarker.radius</strong> : the filling of the circle used to indicate on the map the position
+of a search result, following a click on this result in the control, when this result is in the form
+of a point</li>
+<li><strong>searchPointMarker.fill</strong> : the color of the circle used to indicate on the map the position
+of a search result, following a click on this result in the control, when this result is in the form
+of a point</li>
+<li><strong>searchPointPolyline.polyline.color</strong> : the color of the polyline used to indicate on the map the position
+of a search result, following a click on this result in the control, when this result is in the form
+of a polyline</li>
+<li><strong>searchPointPolyline.polyline.weight</strong> : the weight of the polyline used to indicate on the map the position
+of a search result, following a click on this result in the control, when this result is in the form
+of a polyline</li>
+<li><strong>searchPointPolyline.polyline.fill</strong> : the filling of the polyline used to indicate on the map the position
+of a search result, following a click on this result in the control, when this result is in the form
+of a polyline</li>
+<li><strong>previousSearchLimit.polyline.color</strong> : the color of the polyline used to indicate on the map
+the area of the last search performed</li>
+<li><strong>previousSearchLimit.polyline.weight</strong> : the weight of the polyline used to indicate on the map
+the area of the last search performed</li>
+<li><strong>previousSearchLimit.polyline.fill</strong> : the filling of the polyline used to indicate on the map
+the area of the last search performed</li>
+<li><strong>nextSearchLimit.polyline.color</strong> : the color of the polyline used to indicate on the map the
+area of the next search</li>
+<li><strong>nextSearchLimit.polyline.weight</strong> : the weight of the polyline used to indicate on the map
+the area of the next search</li>
+<li><strong>nextSearchLimit.polyline.fill</strong> : the filling of the polyline used to indicate on the map
+the area of the next search</li>
+<li><strong>wayPoint.reverseGeocoding</strong> : when this value is true, the coordinates of the waypoints are
+replaced by an address.</li>
+<li><strong>route.color</strong> : the default color of a route.</li>
+<li><strong>route.width</strong> : the default width of a route.</li>
+<li><strong>route.dashArray</strong> : the line type to use by default (= a number corresponding to the row
+type index in the dashChoices array).</li>
+<li><strong>route.dashChoices</strong> : a table showing the different types of lines displayed in the
+RoutesPropertiesDialog dialog box. Text will be displayed in the line type selector and iDashArray
+is the template of the line type. Warning: the values in this table are numeric values and will be
+multiplied by the width of the line and converted into text before being used to adapt the line
+type in Leaflet.</li>
+<li><strong>route.elev.smooth</strong> : when this value is true, the road profile is smoothed</li>
+<li><strong>route.elev.smoothCoefficient</strong> : a coefficient used to calculate the distance between two points
+for smoothing the elevation. Default value: 0.25</li>
+<li><strong>route.elev.smoothPoints</strong> : the number of points before and after the current point in the smoothing calculations</li>
+<li><strong>route.showDragTooltip</strong> : the number of times the tooltip displayed when adding a waypoint is shown
+( -1 = always ).</li>
+<li><strong>note.theDevil.addButton</strong> : when this value is true, abutton &quot;theDevil&quot; is added
+to the notes dialog box</li>
+<li><strong>note.theDevil.title</strong> : the tooltip for &quot;theDevil&quot; button</li>
+<li><strong>note.theDevil.text</strong> : the text for &quot;theDevil&quot; button</li>
+<li><strong>note.theDevil.noteZoom</strong> : le zoom for &quot;theDevil&quot; button</li>
+<li><strong>note.reverseGeocoding</strong> : when this value is true, the coordinates of the notes are replaced
+by an address.</li>
+<li><strong>note.grip.size</strong> : the size of the handle at the end of the line of a note.</li>
+<li><strong>note.grip.opacity</strong> : the opacity of the handle at the end of the line of a note (0 = invisible!).</li>
+<li><strong>note.grip.moveOpacity</strong> : the opacity of the handle at the end of the line of a note
+when the mouse is on the handle</li>
+<li><strong>note.polyline.color</strong> : the color of the line of a note.</li>
+<li><strong>note.polyline.weight</strong> : the width of the line of a note.</li>
+<li><strong>note.style</strong> : the css style used to represent a note.</li>
+<li><strong>note.svgIconWidth</strong> : the radius of the area to be mapped in the SVG icon</li>
+<li><strong>note.svgAnleMaxDirection.right</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn right&quot; in the tooltip of the SVG icons</li>
+<li><strong>note.svgAnleMaxDirection.slightRight</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn slight right&quot; in the tooltip of the SVG icons</li>
+<li><strong>note.svgAnleMaxDirection.continue</strong> : the maximum angle of the direction to follow for the indication
+&quot;Continue&quot; in the tooltip of the SVG icons</li>
+<li><strong>note.svgAnleMaxDirection.slightLeft</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn slight left&quot; in the tooltip of the SVG icons</li>
+<li><strong>note.svgAnleMaxDirection.left</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn left&quot; in the tooltip of the SVG icons</li>
+<li><strong>note.svgAnleMaxDirection.sharpLeft</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn sharp left&quot; in the tooltip of the SVG icons</li>
+<li><strong>note.svgAnleMaxDirection.sharpRight</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn sharp right&quot; in the tooltip of the SVG icons</li>
+<li><strong>note.svgZoom</strong> : the zoom value used to make the SVG icons</li>
+<li><strong>note.svgAngleDistance</strong> : the minimum distance to use between the center of the SVG icon and
+the point used to calculate the rotation of the icon</li>
+<li><strong>note.svgHamletDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = hamlet in OSM for this tag to be used in the address of the icon</li>
+<li><strong>note.svgVillageDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = village in OSM for this tag to be used in the address of the icon</li>
+<li><strong>note.svgCityDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = city in OSM for this tag to be used in the address of the icon</li>
+<li><strong>note.svgTownDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = town in OSM for this tag to be used in the address of the icon</li>
+<li><strong>note.svgTimeOut</strong> : the duration of the timeout sent with the request to create the SVG icon</li>
+<li><strong>note.cityPrefix</strong> : a text that will be displayed before the name of the city in the address</li>
+<li><strong>note.cityPostfix</strong> : a text that will be displayed after the name of the city in the address</li>
+<li><strong>note.maxManeuversNotes</strong>: the maximum number of notes that can be created with the command
+&quot;Create a note for each route maneuver&quot;.</li>
+<li><strong>itineraryPointZoom</strong> : the zoom factor used to zoom in on a point in the route from a
+double-click in the control.</li>
+<li><strong>displayEditionInHTMLPage</strong> : when this value is true and a route is being edited, changes to
+that route will be immediately imported into the roadbook.</li>
+<li><strong>travelEditor.clearAfterSave</strong> : is not currently used.</li>
+<li><strong>travelEditor.startMinimized</strong> : when this value is true, the TravelNotes control is initially
+minimized.</li>
+<li><strong>travelEditor.timeout</strong> : the time that elapses between the moment when the mouse is no longer
+in control and when it will be minimized.</li>
+<li><strong>travelEditor.startupRouteEdition</strong> : when this value is true, a route is directly edited when
+a new file is opened.</li>
+<li><strong>haveBeforeUnloadWarning</strong> : when this value is true, a warning is displayed when the web page
+is closed but data may not be saved.</li>
+<li><strong>overpassApiUrl</strong> : the url to use for the overpass API</li>
+<li><strong>nominatim.url</strong> : the url to use for Nominatim</li>
+<li><strong>nominatim.language</strong> : the language to use for Nominatim</li>
+<li><strong>printRouteMap.isEnabled</strong> : when this value is true, the command to print the maps of a route is active.</li>
+<li><strong>printRouteMap.maxTiles</strong> : the maximum number of tiles that can be used to print a route</li>
+<li><strong>printRouteMap.paperWidth</strong> : the paper width</li>
+<li><strong>printRouteMap.paperHeight</strong> : the paper height</li>
+<li><strong>printRouteMap.pageBreak</strong> : when this value is true, a page break is inserted after each map</li>
+<li><strong>printRouteMap.printNotes</strong> : when this value is true, the notes icon is also printed</li>
+<li><strong>printRouteMap.borderWidth</strong> : the width of the map edge which will be duplicated in each map</li>
+<li><strong>printRouteMap.zoomFactor</strong> :  the zoom to use for printing</li>
+<li><strong>printRouteMap.entryPointMarker</strong> : the options to use for the start of route marker. All options
+from <a href="https://leafletjs.com/reference-1.6.0.html#circlemarker">leaflet.CircleMarker</a> can be used.</li>
+<li><strong>printRouteMap.exitPointMarker</strong> : the options to use for the end of route marker. All options
+from <a href="https://leafletjs.com/reference-1.6.0.html#circlemarker">leaflet.CircleMarker</a> can be used.</li>
+<li><strong>itineraryPane.showNotes</strong> : when true notes are showed in the itinerary</li>
+<li><strong>itineraryPane.showManeuvers</strong> : when true maneuvers are showed in the itinerary</li>
+<li><strong>colorDialog.haveSlider</strong> : when true the color dialog and route properties dialog have a
+slider for the red color, otherwise buttons</li>
+<li><strong>colorDialog.initialRed</strong> : the initial value of the red slider</li>
+</ul>
+<p><a id="TravelNotesLayersJson"></a></p>
+<h3>The contents of the TravelNotesLayers.json file</h3>
+<p>This file contains the definitions of background maps of the &quot;Maps&quot; toolbar
+These definitions can be adapted.</p>
+<p>A sample file with two different background maps, one with the Ferraris map
+of Belgium in 1771, the other with the Thunderforest OpenCycleMap map</p>
+<pre class="prettyprint source"><code>[
+	{
+		&quot;service&quot;:&quot;wms&quot;,
+		&quot;url&quot;:&quot;http://geoservices.wallonie.be/arcgis/services/CARTES_ANCIENNES/FERRARIS/MapServer/WMSServer&quot;,
+		&quot;wmsOptions&quot;:
+		{
+			&quot;layers&quot;:&quot;0&quot;,
+			&quot;format&quot;:&quot;image/png&quot;,
+			&quot;transparent&quot;:true
+		},
+		&quot;bounds&quot;:[ [ 49.15, 2.56 ], [ 50.95, 6.49 ] ],
+		&quot;minZoom&quot;:7,
+		&quot;name&quot;:&quot;Service Public de Wallonie - Ferraris map 1770 - 1776&quot;,
+		&quot;toolbar&quot;:
+		{
+			&quot;text&quot;:&quot;1771&quot;,
+			&quot;color&quot;:&quot;black&quot;,
+			&quot;backgroundColor&quot;:&quot;white&quot;
+		},
+		&quot;providerName&quot;:&quot;SPW&quot;,
+		&quot;providerKeyNeeded&quot;:false,
+		&quot;attribution&quot;:&quot;| &lt;a href='http://geoportail.wallonie.be/home.html' target='_blank'>Service public de Wallonie (SPW)&lt;/a>&quot;,
+		&quot;getCapabilitiesUrl&quot;:&quot;https://geoservices.wallonie.be/arcgis/services/CARTES_ANCIENNES/FERRARIS/MapServer/WMSServer?REQUEST=GetCapabilities&SERVICE=WMS&quot;
+	},
+	{
+		&quot;service&quot;:&quot;wmts&quot;,
+		&quot;url&quot;:&quot;https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey={providerKey}&quot;,
+		&quot;name&quot;:&quot;Thunderforest - OpenCycleMap&quot;,
+		&quot;toolbar&quot;:
+		{
+			&quot;text&quot;:&quot;&#x1f6b2;&quot;,
+			&quot;color&quot;:&quot;black&quot;,
+			&quot;backgroundColor&quot;:&quot;white&quot;
+		},
+		&quot;providerName&quot;:&quot;Thunderforest&quot;,
+		&quot;providerKeyNeeded&quot;:true,
+		&quot;attribution&quot;:&quot;| Tiles courtesy of &lt;a href='http://www.thunderforest.com/' target='_blank' title='Andy Allan'>Andy Allan&lt;/a> &quot;
+	}
+]
+</code></pre>
+<p>Some explanations on the content of the file for each background map</p>
+<ul>
+<li><strong>service</strong> : the type of service: wms or wmts</li>
+<li><strong>url</strong>: the url to use to get the map. The values {s}, {x}, {y} and {z} will be replaced by
+Leaflet, the value {providerKey} will be replaced by Travel &amp; Notes by the possible access key
+for service. Never replace {providerKey} directly with your own access key !!!</li>
+<li><strong>wmsOptions</strong> : these are the options to pass to Leaflet for a wms service.
+See the Leaflet <a href="https://leafletjs.com/reference-1.6.0.html#tilelayer-wms">TileLayer.WMS</a> documentation.
+At a minimum, &quot;layers&quot;, &quot;format&quot; and &quot;transparent&quot; should be present.</li>
+<li><strong>bounds</strong> : the lower left and upper right corner of the map.</li>
+<li><strong>minZoom</strong> : the smallest possible zoom for this map</li>
+<li><strong>maxZoom</strong> : the largest possible zoom for this map</li>
+<li><strong>name</strong> : the name of the map. It will be used in the tooltip of the button in the toolbar.</li>
+<li><strong>toolbar.text</strong> : the text to display in the toolbar button</li>
+<li><strong>toolbar.color</strong> : the foreground color of the toolbar button</li>
+<li><strong>toolbar.backgroundColor</strong> : the background color of the toolbar button</li>
+<li><strong>providerName</strong> : the name of the service provider. This name will be used to find
+the access key to the service.</li>
+<li><strong>providerKeyNeeded</strong> : when this value is true, an access key is required to get the map.</li>
+<li><strong>attribution</strong> : the map attributions. For maps based on OpenStreetMap, it is not necessary to add
+the attributions of OpenStreetMap because they are always present in Travel &amp; Notes.</li>
+<li><strong>getCapabilitiesUrl</strong> : the url of the getCapabilities file when it is known.</li>
+</ul>
+<p><a id="TravelNotesNoteDialogJson"></a></p>
+<h3>The contents of the TravelNotesNoteDialogFR.json and TravelNotesNoteDialogEN.json file</h3>
+<p>This file contains the definitions of the buttons and list of predefined icons of the note editing box.
+These definitions can be adapted to your needs.</p>
+<p>Sample file with 3 buttons and 2 predefined icons:</p>
+<pre class="prettyprint source"><code>{ &quot;editionButtons&quot; : 
+	[
+		{
+			&quot;title&quot; : &quot;&lt;span style='color:white;background-color:blue'>Blue&lt;/span>&quot;,
+			&quot;htmlBefore&quot; : &quot;&lt;span style='color:white;background-color:blue'>&quot;,
+			&quot;htmlAfter&quot; : &quot;&lt;/span>&quot;
+		}, 
+		{
+			&quot;title&quot; : &quot;&lt;span style='color:white;background-color:red'>Red&lt;/span>&quot;,
+			&quot;htmlBefore&quot; : &quot;&lt;span style='color:white;background-color:red'>&quot;,
+			&quot;htmlAfter&quot; : &quot;&lt;/span>&quot;
+		}, 
+		{
+			&quot;title&quot;: &quot;Ø&quot;,
+			&quot;htmlBefore&quot;: &quot;Ø&quot;
+		}
+	],
+	&quot;preDefinedIconsList&quot; :
+	[
+		{
+			&quot;name&quot; : &quot;Vélos admis&quot;,
+			&quot;icon&quot; : &quot;&lt;div class='TravelNotes-MapNote TravelNotes-MapNoteCategory-0005'>&lt;/div>&quot;,
+			&quot;tooltip&quot; : &quot;Vélos admis&quot;,
+			&quot;width&quot; : 40,
+			&quot;height&quot; : 40
+		},
+		{
+			&quot;name&quot; : &quot;Autobus&quot;,
+			&quot;icon&quot; : &quot;&lt;div class='TravelNotes-MapNote TravelNotes-MapNoteCategory-0006'>&lt;/div>&quot;,
+			&quot;tooltip&quot; : &quot;Autobus&quot;,
+			&quot;width&quot; : 40,
+			&quot;height&quot; : 40
+		}
+	]
+}
+</code></pre>
+<p>Two collections of objects <strong>must</strong> be present in the file: &quot;editionButtons&quot; for the additional
+buttons and &quot;preDefinedIconsList&quot; for the predefined icons. These collections may be empty
+but must be present.</p>
+<p>Each object in the &quot;editionButtons&quot; collection has two or three properties;</p>
+<ul>
+<li><strong>title</strong> : the text that will appear on the button in the dialog box</li>
+<li><strong>htmlBefore</strong> : the text that will be inserted before the selection when the button is clicked</li>
+<li><strong>htmlAfter</strong> : the text that will be inserted after the selection when the button is clicked.
+This property is optional.</li>
+</ul>
+<p>Each object in the &quot;preDefinedIconsList&quot; collection has five properties:</p>
+<ul>
+<li><strong>name</strong> : the name that will be displayed in the drop-down list (text)</li>
+<li><strong>icon</strong> : the content of the icon (html)</li>
+<li><strong>tooltip</strong> : the content of the tooltip (html)</li>
+<li><strong>width</strong> : the width of the icon in pixels</li>
+<li><strong>height</strong> : the height of the icon in pixels</li>
+</ul>
+<p><a id="myTravelNotesNoteDialogJson"></a></p>
+<h3>The contents of the configuration file that can be loaded with the button :file_folder: in the notes dialog</h3>
+<p>The organization of this file is identical to the files TravelNotesNoteDialogFR.json and TravelNotesNoteDialogEN.json</p>
+<p><a id="Viewer"></a></p>
+<h2>Using the viewer</h2>
+<p>The viewer allows you to view files that have been made with TravelNotes. It does not have
+controls or menus and therefore does not allow modification of a travel. Its advantage lies in the
+fact that it does not use (too much) recent Javascript and that it is lighter than Travel &amp; Notes.
+Therefore, it is well suited for viewing travels on relatively slow old mobiles.</p>
+<p>It installs like Travel &amp; Notes, with two tags &lt;link&gt; and two tags &lt;script&gt;
+one for Leaflet and the other for the viewer.</p>
+<pre class="prettyprint source"><code>&lt;!DOCTYPE html>
+&lt;html>
+	&lt;head>
+		&lt;meta charset=&quot;UTF-8&quot; />
+		&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+		&lt;meta name=&quot;ROBOTS&quot; content=&quot;NOINDEX, NOFOLLOW&quot; />
+		&lt;title>Travel & Notes by wwwouaiebe&lt;/title>
+		&lt;link rel=&quot;stylesheet&quot; href=&quot;leaflet/leaflet.css&quot; />
+		&lt;link rel=&quot;stylesheet&quot; href=&quot;TravelNotesViewer.min.css&quot; />
+	&lt;/head>
+	&lt;body>
+		&lt;script src=&quot;leaflet/leaflet.js&quot;>&lt;/script>&lt;noscript>Oh oh. Javascript is not enabled. It's impossible to display this page without javascript.&lt;/noscript>
+		&lt;script src=&quot;TravelNotesViewer.min.js&quot;>&lt;/script>
+	&lt;/body>
+&lt;/html>
+</code></pre>
+<p>The TravelNotesViewer.min.css and TravelNotesViewer.min.js files as well as the configuration JSON
+files are in the &quot;viewer&quot; sub-directory</p>
+<p><a id="Translations"></a></p>
+<h2>Translations</h2>
+<p>Travel &amp; Notes is translated into 'fr' and 'en'. If you want to translate Travel &amp; Notes into
+another language, copy the TravelNotesEN.json file and rename it according to the language used. Then,
+edit this file and translate all the lines in the desired language.
+To load Travel &amp; Notes in another language, add to the url lng = and the language to use
+(example to use Travel &amp; Notes in english: https://wwwouaiebe.github.io/leaflet.TravelNotes/?lng=en.)</p>
+<p>The organization of these files is as close as possible to that of
+<a href="https://en.wikipedia.org/wiki/Gettext">GNU getText</a></p>
+<p><a id="Plugins"></a></p>
+<h2>Plugins</h2>
+<p>To use a plugin, simply load it from the html page using the tag <script></p>
+</article>
+
+</section>
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:03 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

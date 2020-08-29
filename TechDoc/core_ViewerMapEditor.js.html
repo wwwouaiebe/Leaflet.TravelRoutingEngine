@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: core/ViewerMapEditor.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: core/ViewerMapEditor.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/*
+Changes:
+	- v1.6.0:
+		- created from MapEditor
+	- v1.8.0:
+		- issue #97 : Improve adding a new waypoint to a route
+	- v1.12.0:
+		- Issue #120 : Review the UserInterface
+Doc reviewed 20200803
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file ViewerMapEditor.js
+@copyright Copyright - 2017 2020 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@typedef {Object} NoteLeafletObjects
+@desc An object with all the Leaflet objects for a note
+@property {Object} marker The marker of the note
+@property {Object} polyline The polyline of the note
+@property {Object} bullet The bullet of the note (= a Leaflet marker)
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module ViewerMapEditor
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/* global L */
+
+import { theConfig } from '../data/Config.js';
+import { theDataSearchEngine } from '../data/DataSearchEngine.js';
+import { theGeometry } from '../util/Geometry.js';
+import { theUtilities } from '../util/Utilities.js';
+import { theTravelNotesData } from '../data/TravelNotesData.js';
+import { theHTMLViewsFactory } from '../UI/HTMLViewsFactory.js';
+import { GEOLOCATION_STATUS, ROUTE_EDITION_STATUS, ZERO, ONE, TWO } from '../util/Constants.js';
+
+const DEFAULT_MAX_ZOOM = 18;
+const DEFAULT_MIN_ZOOM = 0;
+
+let ourCurrentLayer = null;
+let ourGeolocationCircle = null;
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourOnRouteMouseOverOrMove
+@desc Event listener for a Route
+@listens mouseover
+@listens mousemove
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourOnRouteMouseOverOrMove ( mapEvent ) {
+	let route = theDataSearchEngine.getRoute ( mapEvent.target.objId );
+	let distance = theGeometry.getClosestLatLngDistance ( route, [ mapEvent.latlng.lat, mapEvent.latlng.lng ] )
+		.distance;
+	distance += route.chainedDistance;
+	distance = theUtilities.formatDistance ( distance );
+	let polyline = theTravelNotesData.mapObjects.get ( mapEvent.target.objId );
+	polyline.closeTooltip ( );
+	let tooltipText = route.computedName;
+	if ( ! theTravelNotesData.travel.readOnly ) {
+		tooltipText += ( ZERO === tooltipText.length ? '' : ' - ' );
+		tooltipText += distance;
+	}
+	polyline.setTooltipContent ( tooltipText );
+	polyline.openTooltip ( mapEvent.latlng );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourAddTo
+@desc Add a Leaflet object to the map
+@param {!number} objId The objId to use
+@param {Object} leafletObject The Leaflet object to add
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourAddTo ( objId, leafletObject ) {
+	leafletObject.objId = objId;
+	leafletObject.addTo ( theTravelNotesData.map );
+	theTravelNotesData.mapObjects.set ( objId, leafletObject );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourAddNote
+@desc Add a Note to the map
+@param {!number} objId The objId of the note to add
+@return {NoteLeafletObjects} An object with a reference to the Leaflet objects of the note
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourAddNote ( noteObjId ) {
+
+	let note = theDataSearchEngine.getNoteAndRoute ( noteObjId ).note;
+
+	// first a marker is created at the note position. This marker is empty and transparent, so
+	// not visible on the map but the marker can be dragged
+	let bullet = L.marker (
+		note.latLng,
+		{
+			icon : L.divIcon (
+				{
+					iconSize : [ theConfig.note.grip.size, theConfig.note.grip.size ],
+					iconAnchor : [ theConfig.note.grip.size / TWO, theConfig.note.grip.size / TWO ],
+					html : '&lt;div>&lt;/div>',
+					className : 'TravelNotes-Note-Bullet'
+				}
+			),
+			opacity : theConfig.note.grip.opacity,
+			draggable : ! theTravelNotesData.travel.readOnly
+		}
+	);
+	bullet.objId = note.objId;
+
+	// a second marker is now created. The icon created by the user is used for this marker
+	let icon = L.divIcon (
+		{
+			iconSize : [ note.iconWidth, note.iconHeight ],
+			iconAnchor : [ note.iconWidth / TWO, note.iconHeight / TWO ],
+			popupAnchor : [ ZERO, -note.iconHeight / TWO ],
+			html : note.iconContent,
+			className : 'TravelNotes-AllNotes ' + theConfig.note.style
+		}
+	);
+
+	const NOTE_Z_INDEX_OFFSET = 100;
+	let marker = L.marker (
+		note.iconLatLng,
+		{
+			zIndexOffset : NOTE_Z_INDEX_OFFSET,
+			icon : icon,
+			draggable : ! theTravelNotesData.travel.readOnly
+		}
+	);
+	marker.objId = note.objId;
+
+	// a popup is binded to the the marker...
+	marker.bindPopup (
+		layer => theHTMLViewsFactory.getNoteTextHTML (
+			'TravelNotes-',
+			theDataSearchEngine.getNoteAndRoute ( layer.objId )
+		)
+	);
+
+	// ... and also a tooltip
+	if ( ZERO !== note.tooltipContent.length ) {
+		marker.bindTooltip (
+			layer => theDataSearchEngine.getNoteAndRoute ( layer.objId ).note.tooltipContent
+		);
+		marker.getTooltip ( ).options.offset [ ZERO ] = note.iconWidth / TWO;
+	}
+
+	// Finally a polyline is created between the 2 markers
+	let polyline = L.polyline ( [ note.latLng, note.iconLatLng ], theConfig.note.polyline );
+	polyline.objId = note.objId;
+
+	// The 3 objects are added to a layerGroup
+	let layerGroup = L.layerGroup ( [ marker, polyline, bullet ] );
+	layerGroup.markerId = L.Util.stamp ( marker );
+	layerGroup.polylineId = L.Util.stamp ( polyline );
+	layerGroup.bulletId = L.Util.stamp ( bullet );
+
+	// and the layerGroup added to the leaflet map and JavaScript map
+	ourAddTo ( note.objId, layerGroup );
+
+	return Object.freeze ( { marker : marker, polyline : polyline, bullet : bullet } );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourGetDashArray
+@desc This method compute the dashArray to use for a route
+@param {Route} route The route for witch the dashArray must be computed
+@return {string} the dashArray to use for the route
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourGetDashArray ( route ) {
+	if ( route.dashArray >= theConfig.route.dashChoices.length ) {
+		route.dashArray = ZERO;
+	}
+	let iDashArray = theConfig.route.dashChoices [ route.dashArray ].iDashArray;
+	if ( iDashArray ) {
+		let dashArray = '';
+		let dashCounter = ZERO;
+		for ( dashCounter = ZERO; dashCounter &lt; iDashArray.length - ONE; dashCounter ++ ) {
+			dashArray += ( iDashArray [ dashCounter ] * route.width ) + ',';
+		}
+		dashArray += iDashArray [ dashCounter ] * route.width;
+
+		return dashArray;
+	}
+	return null;
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class
+@classdesc This class performs all the readonly updates on the map
+@see {@link theViewerMapEditor} for the one and only one instance of this class
+@see {@link theMapEditor} for read/write updates on the map
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+class ViewerMapEditor {
+
+	/**
+	This method add a route on the map
+	This method is called by the 'routeupdated' event listener of the viewer
+	and by the MapEditor.updateRoute( ) method
+	@param {!number} routeObjId The objId of the route to add
+	@return {Route} the added Route
+	@listens routeupdated
+	*/
+
+	addRoute ( routeObjId ) {
+		let route = theDataSearchEngine.getRoute ( routeObjId );
+
+		// an array of points is created
+		let latLng = [];
+		let pointsIterator = route.itinerary.itineraryPoints.iterator;
+		while ( ! pointsIterator.done ) {
+			latLng.push ( pointsIterator.value.latLng );
+		}
+
+		// the leaflet polyline is created and added to the map
+		let polyline = L.polyline (
+			latLng,
+			{
+				color : route.color,
+				weight : route.width,
+				dashArray : ourGetDashArray ( route )
+			}
+		);
+		ourAddTo ( route.objId, polyline );
+
+		// tooltip and popup are created
+		if ( ROUTE_EDITION_STATUS.notEdited === route.editionStatus ) {
+			polyline.bindTooltip (
+				route.computedName,
+				{ sticky : true, direction : 'right' }
+			);
+			polyline.on ( 'mouseover', ourOnRouteMouseOverOrMove );
+			polyline.on ( 'mousemove', ourOnRouteMouseOverOrMove );
+		}
+
+		polyline.bindPopup (
+			layer => {
+				let popupRoute = theDataSearchEngine.getRoute ( layer.objId );
+				return theHTMLViewsFactory.getRouteHeaderHTML ( 'TravelNotes-UI-', popupRoute );
+			}
+		);
+
+		// left click event
+		L.DomEvent.on ( polyline, 'click', clickEvent => clickEvent.target.openPopup ( clickEvent.latlng ) );
+
+		// notes are added
+		let notesIterator = route.notes.iterator;
+		while ( ! notesIterator.done ) {
+			ourAddNote ( notesIterator.value.objId );
+		}
+
+		return route;
+	}
+
+	/**
+	This method add a note on the map
+	This method is called by the 'noteupdated' event listener of the viewer
+	and indirectly by the MapEditor.updateNote( ) method
+	@param {!number} noteObjId The objId of the note to add
+	@return {NoteLeafletObjects} An object with a reference to the Leaflet objects of the note
+	@listens noteupdated
+	*/
+
+	addNote ( noteObjId ) { return ourAddNote ( noteObjId ); }
+
+	/**
+	This method compute the dashArray to use for a route
+	@param {Route} route The route for witch the dashArray must be computed
+	@return {string} the dashArray to use for the route
+	*/
+
+	getDashArray ( route ) { return ourGetDashArray ( route ); }
+
+	/**
+	This method zoom to a point or an array of points
+	@param {Array.&lt;number>} latLng the point
+	@param {Array.&lt;Array.&lt;Array.&lt;number>>>} geometry the array of points...
+	@listens zoomto
+	*/
+
+	zoomTo ( latLng, geometry ) {
+		if ( geometry ) {
+			let latLngs = [];
+			geometry.forEach ( geometryPart => latLngs = latLngs.concat ( geometryPart ) );
+			theTravelNotesData.map.fitBounds ( theGeometry.getLatLngBounds ( latLngs ) );
+		}
+		else {
+			theTravelNotesData.map.setView ( latLng, theConfig.itineraryPointZoom );
+		}
+	}
+
+	/**
+	This method changes the background map.
+	This method is called by the 'layerchange' event listener of the viewer
+	and by the MapEditor.setLayer( ) method
+	@param {Layer} layer The layer to set
+	@listens layerchange
+	*/
+
+	setLayer ( layer ) {
+		let leafletLayer = null;
+		if ( 'wmts' === layer.service.toLowerCase ( ) ) {
+			leafletLayer = L.tileLayer ( layer.url );
+		}
+		else {
+			leafletLayer = L.tileLayer.wms ( layer.url, layer.wmsOptions );
+		}
+
+		if ( ourCurrentLayer ) {
+			theTravelNotesData.map.removeLayer ( ourCurrentLayer );
+		}
+		theTravelNotesData.map.addLayer ( leafletLayer );
+		ourCurrentLayer = leafletLayer;
+		if ( ! theTravelNotesData.travel.readOnly ) {
+
+			// strange... see issue #79 ... zoom is not correct on read only file
+			// when the background map have bounds...
+			if ( theTravelNotesData.map.getZoom ( ) &lt; ( layer.minZoom || DEFAULT_MIN_ZOOM ) ) {
+				theTravelNotesData.map.setZoom ( layer.minZoom || DEFAULT_MIN_ZOOM );
+			}
+			theTravelNotesData.map.setMinZoom ( layer.minZoom || DEFAULT_MIN_ZOOM );
+			if ( theTravelNotesData.map.getZoom ( ) > ( layer.maxZoom || DEFAULT_MAX_ZOOM ) ) {
+				theTravelNotesData.map.setZoom ( layer.maxZoom || DEFAULT_MAX_ZOOM );
+			}
+			theTravelNotesData.map.setMaxZoom ( layer.maxZoom || DEFAULT_MAX_ZOOM );
+			if ( layer.bounds ) {
+				if (
+					! theTravelNotesData.map.getBounds ( ).intersects ( layer.bounds )
+					||
+					theTravelNotesData.map.getBounds ( ).contains ( layer.bounds )
+				) {
+					theTravelNotesData.map.setMaxBounds ( null );
+					theTravelNotesData.map.fitBounds ( layer.bounds );
+					theTravelNotesData.map.setZoom ( layer.minZoom || DEFAULT_MIN_ZOOM );
+				}
+				theTravelNotesData.map.setMaxBounds ( layer.bounds );
+			}
+			else {
+				theTravelNotesData.map.setMaxBounds ( null );
+			}
+		}
+		theTravelNotesData.map.fire ( 'baselayerchange', leafletLayer );
+	}
+
+	/**
+	This method is called when the geolocation status is changed
+	@param {GEOLOCATION_STATUS} geoLocationStatus The geolocation status
+	@listens geolocationstatuschanged
+	*/
+
+	onGeolocationStatusChanged ( geoLocationStatus ) {
+		if ( GEOLOCATION_STATUS.active === geoLocationStatus ) {
+			return;
+		}
+		if ( ourGeolocationCircle ) {
+			theTravelNotesData.map.removeLayer ( ourGeolocationCircle );
+			ourGeolocationCircle = null;
+		}
+	}
+
+	/**
+	This method is called when the geolocation position is changed
+	@param {GeolocationPosition} position a JS GeolocationPosition object
+	@listens geolocationpositionchanged
+	*/
+
+	onGeolocationPositionChanged ( position ) {
+		let zoomToPosition = theConfig.geoLocation.zoomToPosition;
+		if ( ourGeolocationCircle ) {
+			theTravelNotesData.map.removeLayer ( ourGeolocationCircle );
+			zoomToPosition = false;
+		}
+
+		ourGeolocationCircle = L.circleMarker (
+			L.latLng ( position.coords.latitude, position.coords.longitude ),
+			{
+				radius : theConfig.geoLocation.radius,
+				color : theConfig.geoLocation.color
+			}
+		)
+			.bindTooltip (
+				theUtilities.formatLatLng ( [ position.coords.latitude, position.coords.longitude ] )
+			)
+			.addTo ( theTravelNotesData.map );
+
+		if ( zoomToPosition ) {
+			theTravelNotesData.map.setView (
+				L.latLng ( position.coords.latitude, position.coords.longitude ),
+				theConfig.geoLocation.zoomFactor
+			);
+		}
+	}
+
+}
+
+const ourViewerMapEditor = Object.seal ( new ViewerMapEditor );
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@desc The one and only one instance of ViewerMapEditor class
+	@type {ViewerMapEditor}
+	@constant
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourViewerMapEditor as theViewerMapEditor
+};
+
+/*
+--- End of ViewerMapEditor.js file --------------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newOsmSearchEngine">newOsmSearchEngine</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sat Aug 29 2020 17:40:02 GMT+0200 (GMT+02:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
