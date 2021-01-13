@@ -103,187 +103,428 @@ as EcmaScript modules.</p>
 You must follow <strong>all</strong> the rules for writing json files.</p>
 <p>The contents of the TravelNotesConfig.json file:</p>
 <ul>
-<li><strong>autoLoad</strong> : when this value is true, the map and all controls are built automatically when
-Travel &amp; Notes loads</li>
-<li><strong>map.center.lat</strong> : the latitude used for the center of the map during automatic loading</li>
-<li><strong>map.center.lng</strong> : the longitude used for the center of the map during automatic loading</li>
-<li><strong>map.zoom</strong> : the zoom used for the map during automatic loading</li>
-<li><strong>travelNotesToolbarUI.contactMail</strong> : the email address used in the contact button</li>
-<li><strong>layersToolbarUI.haveLayersToolbarUI</strong> : when this value is true, the background maps toolbar is present.</li>
-<li><strong>layersToolbarUI.toolbarTimeOut</strong> : the time that will elapse between the moment when the mouse
-is no longer on the toolbar and the moment when this toolbar closes automatically.</li>
-<li><strong>layersToolbarUI.theDevil.addButton</strong> : when this value is true, a &quot;theDevil&quot; button is added
-to the toolbar.</li>
-<li><strong>layersToolbarUI.theDevil.title</strong> : the tooltip used for the &quot;theDevil&quot; button</li>
-<li><strong>layersToolbarUI.theDevil.text</strong> : the text used for the &quot;theDevil&quot; button</li>
-<li><strong>mouseUI.haveMouseUI</strong> : when this value is true, a control is displayed at the top of the screen,
-indicating the coordinates of the mouse, the zoom value and the name of the open file</li>
-<li><strong>errorUI.timeOut</strong> : the time that will elapse between the time an error message is displayed and the time
-it is cleared</li>
-<li><strong>errorUI.helpTimeOut</strong> : the time that will elapse between the time a help message is displayed and the time
-it is cleared</li>
-<li><strong>errorUI.showError</strong> : when this value is true, error messages are displayed</li>
-<li><strong>errorUI.showWarning</strong> : when this value is true, warning messages are displayed</li>
-<li><strong>errorUI.showInfo</strong> : when this value is true, information messages are displayed</li>
-<li><strong>errorUI.showHelp</strong> : when this value is true, help messages are displayed</li>
-<li><strong>geoLocation.color</strong> : the color of the circle used to indicate the geolocation</li>
-<li><strong>geoLocation.radius</strong> : the radius of the circle used to indicate the geolocation</li>
-<li><strong>geoLocation.zoomToPosition</strong> : when this value is true, Travel &amp; Notes zoom in on the position during
-the first geolocation</li>
-<li><strong>geoLocation.zoomFactor</strong> : the zoom factor used for geolocation</li>
-<li><strong>geoLocation.options.enableHighAccuracy</strong> : see Javascript options for localization functions</li>
-<li><strong>geoLocation.options.maximumAge</strong> : see Javascript options for localization functions</li>
-<li><strong>geoLocation.options.timeout</strong> : see Javascript options for localization functions</li>
-<li><strong>APIKeys.showDialogButton</strong> : when this value is true, the :key: button is present in
-the toolbar</li>
-<li><strong>APIKeys.saveToSessionStorage</strong> : when this value is true, the access keys are saved in the
-'SessionStorage'</li>
-<li><strong>APIKeys.showAPIKeysInDialog</strong> : when this value is true, the access keys can be read in the dialog box</li>
-<li><strong>APIKeys.dialogHaveUnsecureButtons</strong> : when this value is true, buttons to save or restore access keys in
-an unsecured file are present</li>
-<li><strong>contextMenu.timeout</strong> : the time that elapses between the moment when the mouse is no longer
-on the contextual menu and the moment when the menu closes automatically.</li>
-<li><strong>routing.auto</strong> : is not currently used.</li>
-<li><strong>language</strong> : the language used by default in TravelNotes</li>
-<li><strong>itineraryPointMarker.color</strong> : the color of the circle used to indicate on the map the point
-of the route on which the mouse is located.</li>
-<li><strong>itineraryPointMarker.weight</strong> : the weight of the circle used to indicate on the map the point
-of the route on which the mouse is located.</li>
-<li><strong>itineraryPointMarker.radius</strong> : the radius of the circle used to indicate on the map the point
-of the route on which the mouse is located.</li>
-<li><strong>itineraryPointMarker.fill</strong> : the filling of the circle used to indicate on the map the point
-of the route on which the mouse is located.</li>
-<li><strong>searchPointMarker.color</strong> : the color of the circle used to indicate on the map the position
+<li>
+<p><strong>autoLoad</strong> : when this value is true, the map and all controls are built automatically when
+Travel &amp; Notes loads</p>
+</li>
+<li>
+<p><strong>map.center.lat</strong> : the latitude used for the center of the map during automatic loading</p>
+</li>
+<li>
+<p><strong>map.center.lng</strong> : the longitude used for the center of the map during automatic loading</p>
+</li>
+<li>
+<p><strong>map.zoom</strong> : the zoom used for the map during automatic loading</p>
+</li>
+<li>
+<p><strong>travelNotesToolbarUI.contactMail.url</strong> : the email address used in the contact button</p>
+</li>
+<li>
+<p><strong>layersToolbarUI.haveLayersToolbarUI</strong> : when this value is true, the background maps toolbar is present.</p>
+</li>
+<li>
+<p><strong>layersToolbarUI.toolbarTimeOut</strong> : the time that will elapse between the moment when the mouse
+is no longer on the toolbar and the moment when this toolbar closes automatically.</p>
+</li>
+<li>
+<p><strong>layersToolbarUI.theDevil.addButton</strong> : when this value is true, a &quot;theDevil&quot; button is added
+to the toolbar.</p>
+</li>
+<li>
+<p><strong>mouseUI.haveMouseUI</strong> : when this value is true, a control is displayed at the top of the screen,
+indicating the coordinates of the mouse, the zoom value and the name of the open file</p>
+</li>
+<li>
+<p><strong>errorUI.timeOut</strong> : the time that will elapse between the time an error message is displayed and the time
+it is cleared</p>
+</li>
+<li>
+<p><strong>errorUI.helpTimeOut</strong> : the time that will elapse between the time a help message is displayed and the time
+it is cleared</p>
+</li>
+<li>
+<p><strong>errorUI.showError</strong> : when this value is true, error messages are displayed</p>
+</li>
+<li>
+<p><strong>errorUI.showWarning</strong> : when this value is true, warning messages are displayed</p>
+</li>
+<li>
+<p><strong>errorUI.showInfo</strong> : when this value is true, information messages are displayed</p>
+</li>
+<li>
+<p><strong>errorUI.showHelp</strong> : when this value is true, help messages are displayed</p>
+</li>
+<li>
+<p><strong>geoLocation.color</strong> : the color of the circle used to indicate the geolocation</p>
+</li>
+<li>
+<p><strong>geoLocation.radius</strong> : the radius of the circle used to indicate the geolocation</p>
+</li>
+<li>
+<p><strong>geoLocation.zoomToPosition</strong> : when this value is true, Travel &amp; Notes zoom in on the position during
+the first geolocation</p>
+</li>
+<li>
+<p><strong>geoLocation.zoomFactor</strong> : the zoom factor used for geolocation</p>
+</li>
+<li>
+<p><strong>geoLocation.options.enableHighAccuracy</strong> : see Javascript options for localization functions</p>
+</li>
+<li>
+<p><strong>geoLocation.options.maximumAge</strong> : see Javascript options for localization functions</p>
+</li>
+<li>
+<p><strong>geoLocation.options.timeout</strong> : see Javascript options for localization functions</p>
+</li>
+<li>
+<p><strong>APIKeys.showDialogButton</strong> : when this value is true, the :key: button is present in
+the toolbar</p>
+</li>
+<li>
+<p><strong>APIKeys.saveToSessionStorage</strong> : when this value is true, the access keys are saved in the
+'SessionStorage'</p>
+</li>
+<li>
+<p><strong>APIKeys.showAPIKeysInDialog</strong> : when this value is true, the access keys can be read in the dialog box</p>
+</li>
+<li>
+<p><strong>APIKeys.dialogHaveUnsecureButtons</strong> : when this value is true, buttons to save or restore access keys in
+an unsecured file are present</p>
+</li>
+<li>
+<p><strong>contextMenu.timeout</strong> : the time that elapses between the moment when the mouse is no longer
+on the contextual menu and the moment when the menu closes automatically.</p>
+</li>
+<li>
+<p><strong>routing.auto</strong> : is not currently used.</p>
+</li>
+<li>
+<p><strong>language</strong> : the language used by default in TravelNotes</p>
+</li>
+<li>
+<p><strong>itineraryPointMarker.color</strong> : the color of the circle used to indicate on the map the point
+of the route on which the mouse is located.</p>
+</li>
+<li>
+<p><strong>itineraryPointMarker.weight</strong> : the weight of the circle used to indicate on the map the point
+of the route on which the mouse is located.</p>
+</li>
+<li>
+<p><strong>itineraryPointMarker.radius</strong> : the radius of the circle used to indicate on the map the point
+of the route on which the mouse is located.</p>
+</li>
+<li>
+<p><strong>itineraryPointMarker.fill</strong> : the filling of the circle used to indicate on the map the point
+of the route on which the mouse is located.</p>
+</li>
+<li>
+<p><strong>searchPointMarker.color</strong> : the color of the circle used to indicate on the map the position
 of a search result, following a click on this result in the control, when this result is in the form
-of a point</li>
-<li><strong>searchPointMarker.weight</strong> : the weight of the circle used to indicate on the map the position
+of a point</p>
+</li>
+<li>
+<p><strong>searchPointMarker.weight</strong> : the weight of the circle used to indicate on the map the position
 of a search result, following a click on this result in the control, when this result is in the form
-of a point</li>
-<li><strong>searchPointMarker.radius</strong> : the filling of the circle used to indicate on the map the position
+of a point</p>
+</li>
+<li>
+<p><strong>searchPointMarker.radius</strong> : the filling of the circle used to indicate on the map the position
 of a search result, following a click on this result in the control, when this result is in the form
-of a point</li>
-<li><strong>searchPointMarker.fill</strong> : the color of the circle used to indicate on the map the position
+of a point</p>
+</li>
+<li>
+<p><strong>searchPointMarker.fill</strong> : the color of the circle used to indicate on the map the position
 of a search result, following a click on this result in the control, when this result is in the form
-of a point</li>
-<li><strong>searchPointPolyline.polyline.color</strong> : the color of the polyline used to indicate on the map the position
+of a point</p>
+</li>
+<li>
+<p><strong>searchPointPolyline.color</strong> : the color of the polyline used to indicate on the map the position
 of a search result, following a click on this result in the control, when this result is in the form
-of a polyline</li>
-<li><strong>searchPointPolyline.polyline.weight</strong> : the weight of the polyline used to indicate on the map the position
+of a polyline</p>
+</li>
+<li>
+<p><strong>searchPointPolyline.weight</strong> : the weight of the polyline used to indicate on the map the position
 of a search result, following a click on this result in the control, when this result is in the form
-of a polyline</li>
-<li><strong>searchPointPolyline.polyline.fill</strong> : the filling of the polyline used to indicate on the map the position
+of a polyline</p>
+</li>
+<li>
+<p><strong>searchPointPolyline.fill</strong> : the filling of the polyline used to indicate on the map the position
 of a search result, following a click on this result in the control, when this result is in the form
-of a polyline</li>
-<li><strong>previousSearchLimit.polyline.color</strong> : the color of the polyline used to indicate on the map
-the area of the last search performed</li>
-<li><strong>previousSearchLimit.polyline.weight</strong> : the weight of the polyline used to indicate on the map
-the area of the last search performed</li>
-<li><strong>previousSearchLimit.polyline.fill</strong> : the filling of the polyline used to indicate on the map
-the area of the last search performed</li>
-<li><strong>nextSearchLimit.polyline.color</strong> : the color of the polyline used to indicate on the map the
-area of the next search</li>
-<li><strong>nextSearchLimit.polyline.weight</strong> : the weight of the polyline used to indicate on the map
-the area of the next search</li>
-<li><strong>nextSearchLimit.polyline.fill</strong> : the filling of the polyline used to indicate on the map
-the area of the next search</li>
-<li><strong>wayPoint.reverseGeocoding</strong> : when this value is true, the coordinates of the waypoints are
-replaced by an address.</li>
-<li><strong>route.color</strong> : the default color of a route.</li>
-<li><strong>route.width</strong> : the default width of a route.</li>
-<li><strong>route.dashArray</strong> : the line type to use by default (= a number corresponding to the row
-type index in the dashChoices array).</li>
-<li><strong>route.dashChoices</strong> : a table showing the different types of lines displayed in the
+of a polyline</p>
+</li>
+<li>
+<p><strong>previousSearchLimit.color</strong> : the color of the polyline used to indicate on the map
+the area of the last search performed</p>
+</li>
+<li>
+<p><strong>previousSearchLimit.weight</strong> : the weight of the polyline used to indicate on the map
+the area of the last search performed</p>
+</li>
+<li>
+<p><strong>previousSearchLimit.fill</strong> : the filling of the polyline used to indicate on the map
+the area of the last search performed</p>
+</li>
+<li>
+<p><strong>nextSearchLimit.color</strong> : the color of the polyline used to indicate on the map the
+area of the next search</p>
+</li>
+<li>
+<p><strong>nextSearchLimit.weight</strong> : the weight of the polyline used to indicate on the map
+the area of the next search</p>
+</li>
+<li>
+<p><strong>nextSearchLimit.fill</strong> : the filling of the polyline used to indicate on the map
+the area of the next search</p>
+</li>
+<li>
+<p><strong>wayPoint.reverseGeocoding</strong> : when this value is true, the coordinates of the waypoints are
+replaced by an address.</p>
+</li>
+<li>
+<p><strong>route.color</strong> : the default color of a route.</p>
+</li>
+<li>
+<p><strong>route.width</strong> : the default width of a route.</p>
+</li>
+<li>
+<p><strong>route.dashArray</strong> : the line type to use by default (= a number corresponding to the row
+type index in the dashChoices array).</p>
+</li>
+<li>
+<p><strong>route.dashChoices</strong> : a table showing the different types of lines displayed in the
 RoutesPropertiesDialog dialog box. Text will be displayed in the line type selector and iDashArray
 is the template of the line type. Warning: the values in this table are numeric values and will be
 multiplied by the width of the line and converted into text before being used to adapt the line
-type in Leaflet.</li>
-<li><strong>route.elev.smooth</strong> : when this value is true, the road profile is smoothed</li>
-<li><strong>route.elev.smoothCoefficient</strong> : a coefficient used to calculate the distance between two points
-for smoothing the elevation. Default value: 0.25</li>
-<li><strong>route.elev.smoothPoints</strong> : the number of points before and after the current point in the smoothing calculations</li>
-<li><strong>route.showDragTooltip</strong> : the number of times the tooltip displayed when adding a waypoint is shown
-( -1 = always ).</li>
-<li><strong>note.theDevil.addButton</strong> : when this value is true, abutton &quot;theDevil&quot; is added
-to the notes dialog box</li>
-<li><strong>note.theDevil.title</strong> : the tooltip for &quot;theDevil&quot; button</li>
-<li><strong>note.theDevil.text</strong> : the text for &quot;theDevil&quot; button</li>
-<li><strong>note.theDevil.noteZoom</strong> : le zoom for &quot;theDevil&quot; button</li>
-<li><strong>note.osmSearchNoteDialog</strong>  : when this value is true, the notes edit box is displayed
-when creating a note from 'Search OpenstreetMap'</li>
-<li><strong>note.reverseGeocoding</strong> : when this value is true, the coordinates of the notes are replaced
-by an address.</li>
-<li><strong>note.grip.size</strong> : the size of the handle at the end of the line of a note.</li>
-<li><strong>note.grip.opacity</strong> : the opacity of the handle at the end of the line of a note (0 = invisible!).</li>
-<li><strong>note.grip.moveOpacity</strong> : the opacity of the handle at the end of the line of a note
-when the mouse is on the handle</li>
-<li><strong>note.polyline.color</strong> : the color of the line of a note.</li>
-<li><strong>note.polyline.weight</strong> : the width of the line of a note.</li>
-<li><strong>note.haveBackground</strong> : when this value is true, a white background is displayed with the note.</li>
-<li><strong>note.style</strong> : the css style used to represent a note.</li>
-<li><strong>note.svgIconWidth</strong> : the radius of the area to be mapped in the SVG icon</li>
-<li><strong>note.svgAnleMaxDirection.right</strong> : the maximum angle of the direction to follow for the indication
-&quot;Turn right&quot; in the tooltip of the SVG icons</li>
-<li><strong>note.svgAnleMaxDirection.slightRight</strong> : the maximum angle of the direction to follow for the indication
-&quot;Turn slight right&quot; in the tooltip of the SVG icons</li>
-<li><strong>note.svgAnleMaxDirection.continue</strong> : the maximum angle of the direction to follow for the indication
-&quot;Continue&quot; in the tooltip of the SVG icons</li>
-<li><strong>note.svgAnleMaxDirection.slightLeft</strong> : the maximum angle of the direction to follow for the indication
-&quot;Turn slight left&quot; in the tooltip of the SVG icons</li>
-<li><strong>note.svgAnleMaxDirection.left</strong> : the maximum angle of the direction to follow for the indication
-&quot;Turn left&quot; in the tooltip of the SVG icons</li>
-<li><strong>note.svgAnleMaxDirection.sharpLeft</strong> : the maximum angle of the direction to follow for the indication
-&quot;Turn sharp left&quot; in the tooltip of the SVG icons</li>
-<li><strong>note.svgAnleMaxDirection.sharpRight</strong> : the maximum angle of the direction to follow for the indication
-&quot;Turn sharp right&quot; in the tooltip of the SVG icons</li>
-<li><strong>note.svgZoom</strong> : the zoom value used to make the SVG icons</li>
-<li><strong>note.svgAngleDistance</strong> : the minimum distance to use between the center of the SVG icon and
-the point used to calculate the rotation of the icon</li>
-<li><strong>note.svgHamletDistance</strong> : the maximum distance between the center of the SVG icon and a point
-with the tag place = hamlet in OSM for this tag to be used in the address of the icon</li>
-<li><strong>note.svgVillageDistance</strong> : the maximum distance between the center of the SVG icon and a point
-with the tag place = village in OSM for this tag to be used in the address of the icon</li>
-<li><strong>note.svgCityDistance</strong> : the maximum distance between the center of the SVG icon and a point
-with the tag place = city in OSM for this tag to be used in the address of the icon</li>
-<li><strong>note.svgTownDistance</strong> : the maximum distance between the center of the SVG icon and a point
-with the tag place = town in OSM for this tag to be used in the address of the icon</li>
-<li><strong>note.svgTimeOut</strong> : the duration of the timeout sent with the request to create the SVG icon</li>
-<li><strong>note.cityPrefix</strong> : a text that will be displayed before the name of the city in the address</li>
-<li><strong>note.cityPostfix</strong> : a text that will be displayed after the name of the city in the address</li>
-<li><strong>note.maxManeuversNotes</strong>: the maximum number of notes that can be created with the command
-&quot;Create a note for each route maneuver&quot;.</li>
-<li><strong>itineraryPointZoom</strong> : the zoom factor used to zoom in on a point in the route from a
-double-click in the control.</li>
-<li><strong>displayEditionInHTMLPage</strong> : when this value is true and a route is being edited, changes to
-that route will be immediately imported into the roadbook.</li>
-<li><strong>travelEditor.clearAfterSave</strong> : is not currently used.</li>
-<li><strong>travelEditor.startMinimized</strong> : when this value is true, the TravelNotes control is initially
-minimized.</li>
-<li><strong>travelEditor.timeout</strong> : the time that elapses between the moment when the mouse is no longer
-in control and when it will be minimized.</li>
-<li><strong>travelEditor.startupRouteEdition</strong> : when this value is true, a route is directly edited when
-a new file is opened.</li>
-<li><strong>haveBeforeUnloadWarning</strong> : when this value is true, a warning is displayed when the web page
-is closed but data may not be saved.</li>
-<li><strong>overpassApiUrl</strong> : the url to use for the overpass API</li>
-<li><strong>nominatim.url</strong> : the url to use for Nominatim</li>
-<li><strong>nominatim.language</strong> : the language to use for Nominatim</li>
-<li><strong>printRouteMap.isEnabled</strong> : when this value is true, the command to print the maps of a route is active.</li>
-<li><strong>printRouteMap.maxTiles</strong> : the maximum number of tiles that can be used to print a route</li>
-<li><strong>printRouteMap.paperWidth</strong> : the paper width</li>
-<li><strong>printRouteMap.paperHeight</strong> : the paper height</li>
-<li><strong>printRouteMap.pageBreak</strong> : when this value is true, a page break is inserted after each map</li>
-<li><strong>printRouteMap.printNotes</strong> : when this value is true, the notes icon is also printed</li>
-<li><strong>printRouteMap.borderWidth</strong> : the width of the map edge which will be duplicated in each map</li>
-<li><strong>printRouteMap.zoomFactor</strong> :  the zoom to use for printing</li>
-<li><strong>printRouteMap.entryPointMarker</strong> : the options to use for the start of route marker. All options
-from <a href="https://leafletjs.com/reference-1.6.0.html#circlemarker">leaflet.CircleMarker</a> can be used.</li>
-<li><strong>printRouteMap.exitPointMarker</strong> : the options to use for the end of route marker. All options
-from <a href="https://leafletjs.com/reference-1.6.0.html#circlemarker">leaflet.CircleMarker</a> can be used.</li>
-<li><strong>itineraryPane.showNotes</strong> : when true notes are showed in the itinerary</li>
-<li><strong>itineraryPane.showManeuvers</strong> : when true maneuvers are showed in the itinerary</li>
-<li><strong>colorDialog.haveSlider</strong> : when true the color dialog and route properties dialog have a
-slider for the red color, otherwise buttons</li>
-<li><strong>colorDialog.initialRed</strong> : the initial value of the red slider</li>
+type in Leaflet.</p>
+</li>
+<li>
+<p><strong>route.elev.smooth</strong> : when this value is true, the road profile is smoothed</p>
+</li>
+<li>
+<p><strong>route.elev.smoothCoefficient</strong> : a coefficient used to calculate the distance between two points
+for smoothing the elevation. Default value: 0.25</p>
+</li>
+<li>
+<p><strong>route.elev.smoothPoints</strong> : the number of points before and after the current point in the smoothing calculations</p>
+</li>
+<li>
+<p><strong>route.showDragTooltip</strong> : the number of times the tooltip displayed when adding a waypoint is shown
+( -1 = always ).</p>
+</li>
+<li>
+<p><strong>note.theDevil.addButton</strong> : when this value is true, a button &quot;theDevil&quot; is added
+to the notes dialog box</p>
+</li>
+<li>
+<p><strong>note.theDevil.noteZoom</strong> : le zoom for &quot;theDevil&quot; button</p>
+</li>
+<li>
+<p><strong>note.osmSearchNoteDialog</strong>  : when this value is true, the notes edit box is displayed
+when creating a note from 'Search OpenstreetMap'</p>
+</li>
+<li>
+<p><strong>note.reverseGeocoding</strong> : when this value is true, the coordinates of the notes are replaced
+by an address.</p>
+</li>
+<li>
+<p><strong>note.grip.size</strong> : the size of the handle at the end of the line of a note.</p>
+</li>
+<li>
+<p><strong>note.grip.opacity</strong> : the opacity of the handle at the end of the line of a note (0 = invisible!).</p>
+</li>
+<li>
+<p><strong>note.grip.moveOpacity</strong> : the opacity of the handle at the end of the line of a note
+when the mouse is on the handle</p>
+</li>
+<li>
+<p><strong>note.polyline.color</strong> : the color of the line of a note.</p>
+</li>
+<li>
+<p><strong>note.polyline.weight</strong> : the width of the line of a note.</p>
+</li>
+<li>
+<p><strong>note.haveBackground</strong> : when this value is true, a white background is displayed with the note.</p>
+</li>
+<li>
+<p><strong>note.svgRoadbookDimCoef</strong> : a coefficient by which the dimensions of SVG icons will be multiplied
+in the roadbook</p>
+</li>
+<li>
+<p><strong>note.svgAnleMaxDirection.right</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn right&quot; in the tooltip of the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgAnleMaxDirection.slightRight</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn slight right&quot; in the tooltip of the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgAnleMaxDirection.continue</strong> : the maximum angle of the direction to follow for the indication
+&quot;Continue&quot; in the tooltip of the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgAnleMaxDirection.slightLeft</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn slight left&quot; in the tooltip of the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgAnleMaxDirection.left</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn left&quot; in the tooltip of the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgAnleMaxDirection.sharpLeft</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn sharp left&quot; in the tooltip of the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgAnleMaxDirection.sharpRight</strong> : the maximum angle of the direction to follow for the indication
+&quot;Turn sharp right&quot; in the tooltip of the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgZoom</strong> : the zoom value used to make the SVG icons</p>
+</li>
+<li>
+<p><strong>note.svgAngleDistance</strong> : the minimum distance to use between the center of the SVG icon and
+the point used to calculate the rotation of the icon</p>
+</li>
+<li>
+<p><strong>note.svgHamletDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = hamlet in OSM for this tag to be used in the address of the icon</p>
+</li>
+<li>
+<p><strong>note.svgVillageDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = village in OSM for this tag to be used in the address of the icon</p>
+</li>
+<li>
+<p><strong>note.svgCityDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = city in OSM for this tag to be used in the address of the icon</p>
+</li>
+<li>
+<p><strong>note.svgTownDistance</strong> : the maximum distance between the center of the SVG icon and a point
+with the tag place = town in OSM for this tag to be used in the address of the icon</p>
+</li>
+<li>
+<p><strong>note.svgTimeOut</strong> : the duration of the timeout sent with the request to create the SVG icon</p>
+</li>
+<li>
+<p><strong>note.maxManeuversNotes</strong>: the maximum number of notes that can be created with the command
+&quot;Create a note for each route maneuver&quot;.</p>
+</li>
+<li>
+<p><strong>noteDialog.toggleIconDimension</strong>: when this value is false, the dimension controls
+of the icon are always visible</p>
+</li>
+<li>
+<p><strong>noteDialog.toggleIconTextArea</strong>: when this value is false, the icon edit area
+is always visible</p>
+</li>
+<li>
+<p><strong>noteDialog.toggleTooltip</strong>: when this value is false, the tooltip edit area
+is always visible</p>
+</li>
+<li>
+<p><strong>noteDialog.togglePopupContent</strong>: when this value is false, the text edit area
+is always visible</p>
+</li>
+<li>
+<p><strong>noteDialog.toggleAddress</strong>: when this value is false, the address edit area
+is always visible</p>
+</li>
+<li>
+<p><strong>noteDialog.toggleLink</strong>: when this value is false, the link edit area
+is always visible</p>
+</li>
+<li>
+<p><strong>noteDialog.togglePhone</strong>: when this value is v, the phone edit area
+is always visible</p>
+</li>
+<li>
+<p><strong>noteDialog.iconAreaHeight</strong>: the number of lines in the icon edit area</p>
+</li>
+<li>
+<p><strong>noteDialog.popupAreaHeigth</strong>: the number of lines in the text edit area</p>
+</li>
+<li>
+<p><strong>itineraryPointZoom</strong> : the zoom factor used to zoom in on a point in the route from a
+double-click in the control.</p>
+</li>
+<li>
+<p><strong>displayEditionInHTMLPage</strong> : when this value is true and a route is being edited, changes to
+that route will be immediately imported into the roadbook.</p>
+</li>
+<li>
+<p><strong>travelEditor.clearAfterSave</strong> : is not currently used.</p>
+</li>
+<li>
+<p><strong>travelEditor.startMinimized</strong> : when this value is true, the TravelNotes control is initially
+minimized.</p>
+</li>
+<li>
+<p><strong>travelEditor.timeout</strong> : the time that elapses between the moment when the mouse is no longer
+in control and when it will be minimized.</p>
+</li>
+<li>
+<p><strong>travelEditor.startupRouteEdition</strong> : when this value is true, a route is directly edited when
+a new file is opened.</p>
+</li>
+<li>
+<p><strong>haveBeforeUnloadWarning</strong> : when this value is true, a warning is displayed when the web page
+is closed but data may not be saved.</p>
+</li>
+<li>
+<p><strong>overpassApiUrl</strong> : the url to use for the overpass API</p>
+</li>
+<li>
+<p><strong>nominatim.url</strong> : the url to use for Nominatim</p>
+</li>
+<li>
+<p><strong>nominatim.language</strong> : the language to use for Nominatim</p>
+</li>
+<li>
+<p><strong>printRouteMap.isEnabled</strong> : when this value is true, the command to print the maps of a route is active.</p>
+</li>
+<li>
+<p><strong>printRouteMap.maxTiles</strong> : the maximum number of tiles that can be used to print a route</p>
+</li>
+<li>
+<p><strong>printRouteMap.paperWidth</strong> : the paper width</p>
+</li>
+<li>
+<p><strong>printRouteMap.paperHeight</strong> : the paper height</p>
+</li>
+<li>
+<p><strong>printRouteMap.pageBreak</strong> : when this value is true, a page break is inserted after each map</p>
+</li>
+<li>
+<p><strong>printRouteMap.printNotes</strong> : when this value is true, the notes icon is also printed</p>
+</li>
+<li>
+<p><strong>printRouteMap.borderWidth</strong> : the width of the map edge which will be duplicated in each map</p>
+</li>
+<li>
+<p><strong>printRouteMap.zoomFactor</strong> :  the zoom to use for printing</p>
+</li>
+<li>
+<p><strong>printRouteMap.entryPointMarker</strong> : the options to use for the start of route marker. All options
+from <a href="https://leafletjs.com/reference-1.6.0.html#circlemarker">leaflet.CircleMarker</a> can be used.</p>
+</li>
+<li>
+<p><strong>printRouteMap.exitPointMarker</strong> : the options to use for the end of route marker. All options
+from <a href="https://leafletjs.com/reference-1.6.0.html#circlemarker">leaflet.CircleMarker</a> can be used.</p>
+</li>
+<li>
+<p>__haveCrypto : internal use only</p>
+</li>
+<li>
+<p><strong>itineraryPane.showNotes</strong> : when true notes are showed in the itinerary</p>
+</li>
+<li>
+<p><strong>itineraryPane.showManeuvers</strong> : when true maneuvers are showed in the itinerary</p>
+</li>
+<li>
+<p><strong>colorDialog.haveSlider</strong> : when true the color dialog and route properties dialog have a
+slider for the red color, otherwise buttons</p>
+</li>
+<li>
+<p><strong>colorDialog.initialRed</strong> : the initial value of the red slider</p>
+</li>
 </ul>
 <p><a id="TravelNotesLayersJson"></a></p>
 <h3>The contents of the TravelNotesLayers.json file</h3>
@@ -464,13 +705,13 @@ To load Travel &amp; Notes in another language, add to the url lng = and the lan
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <!--footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Sun Dec 20 2020 13:10:56 GMT+0100 (GMT+01:00)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Wed Jan 13 2021 08:34:33 GMT+0100 (GMT+01:00)
 </footer-->
 <script> prettyPrint(); </script>
 <script src="scripts/linenumber.js"> </script>

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: util/HTMLSanitizer.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: util/HTMLSanitizer.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 2021 - wwwouaiebe - Contact: https://www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/*
+Changes:
+	- v2.0.0:
+		- created
+Doc reviewed ...
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file HTMLSanitizer.js
+@copyright Copyright - 2017 2021 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@typedef {Object} UrlValidationReult
+@desc An object returned by the sanitizeToUrl function
+@property {String} url the validated url or an empty string if the url is invalid
+@property {String} errorsString an empty string or an error description if the url is invalid
+@public
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@typedef {Object} HtmlStringValidationReult
+@desc An object returned by the sanitizeToHtmlString function
+@property {String} htmlString the validated string
+@property {String} errorsString an empty string or an error description if the url is invalid
+@public
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module HTMLSanitizer
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+import { SVG_NS, NOT_FOUND, ZERO, ONE, TWO } from '../util/Constants.js';
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class
+@classdesc Coming soon...
+@see {@link theHTMLSanitizer} for the one and only one instance of this class
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+let ourValidityMap = new Map ( );
+
+/*
+WARNING :
+
+	never put script as valid tag !!!
+
+	never put event handler starting with on... as valid attribute !!!
+
+*/
+
+ourValidityMap.set ( 'a', [ 'href', 'target' ] );
+ourValidityMap.set ( 'br', [ ] );
+ourValidityMap.set ( 'div', [ ] );
+ourValidityMap.set ( 'del', [ ] );
+ourValidityMap.set ( 'em', [ ] );
+ourValidityMap.set ( 'figcaption', [ ] );
+ourValidityMap.set ( 'figure', [ ] );
+ourValidityMap.set ( 'h1', [ ] );
+ourValidityMap.set ( 'h2', [ ] );
+ourValidityMap.set ( 'h3', [ ] );
+ourValidityMap.set ( 'h4', [ ] );
+ourValidityMap.set ( 'h5', [ ] );
+ourValidityMap.set ( 'h6', [ ] );
+ourValidityMap.set ( 'hr', [ ] );
+ourValidityMap.set ( 'img', [ 'src', 'alt', 'width', 'height' ] );
+ourValidityMap.set ( 'ins', [ ] );
+ourValidityMap.set ( 'li', [ ] );
+ourValidityMap.set ( 'mark', [ ] );
+ourValidityMap.set ( 'ol', [ ] );
+ourValidityMap.set ( 'p', [ ] );
+ourValidityMap.set ( 's', [ ] );
+ourValidityMap.set ( 'small', [ ] );
+ourValidityMap.set ( 'strong', [ ] );
+ourValidityMap.set ( 'span', [ ] );
+ourValidityMap.set ( 'sub', [ ] );
+ourValidityMap.set ( 'sup', [ ] );
+ourValidityMap.set ( 'ul', [ ] );
+
+ourValidityMap.set ( 'svg', [ 'xmlns', 'viewBox', 'class' ] );
+ourValidityMap.set ( 'text', [ 'x', 'y', 'text-anchor' ] );
+ourValidityMap.set ( 'polyline', [ 'points', 'class', 'transform' ] );
+
+const ourProtocol = window.location.protocol;
+const ourParser = new DOMParser ( );
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourAddHtmlEntities
+@desc replace &lt; >' " and nbsp chars with htmlEntities
+@param {string} htmlString the string to transform
+@return {string} a string with htmlEntities
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourAddHtmlEntities ( htmlString ) {
+	let newHtmlString = htmlString
+		.replaceAll ( /&lt;/g, '&amp;lt;' )
+		.replaceAll ( />/g, '&amp;gt;' )
+		.replaceAll ( /"/g, '&amp;quot;' )
+		.replaceAll ( /\u0027/g, '&amp;apos;' )
+		.replaceAll ( /\u0a00/g, '&amp;nbsp;' );
+
+	return newHtmlString;
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourSanitizeToJsString
+@desc remove all html tags and replace htmlEntities and &lt; > ' " and nbsp chars with others similar unicode chars
+@param {string} stringToSanitize the string to transform
+@return {string} a string with html tags removed and htmlEntities and &lt; >' " and nbsp chars replaced
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourSanitizeToJsString ( stringToSanitize ) {
+	let parseResult = ourParser.parseFromString ( '&lt;div>' + stringToSanitize + '&lt;/div>', 'text/html' );
+	if ( ! parseResult || '#document' !== parseResult.nodeName ) {
+		return '';
+	}
+	let resultNode = parseResult.querySelector ( 'body' ).firstChild;
+	let sanitizedString = '';
+	for ( let nodeCounter = 0; nodeCounter &lt; resultNode.childNodes.length; nodeCounter ++ ) {
+		if ( '#text' === resultNode.childNodes [ nodeCounter ].nodeName ) {
+			sanitizedString += resultNode.childNodes [ nodeCounter ].nodeValue;
+		}
+		else {
+			return '';
+		}
+	}
+	sanitizedString = sanitizedString
+		.replaceAll ( /&lt;/g, '\u227a' )
+		.replaceAll ( />/g, '\u227b' )
+		.replaceAll ( /"/g, '\u2033' )
+		.replaceAll ( /\u0027/g, '\u2032' );
+
+	return sanitizedString;
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourSanitizeUrl
+@desc this function validate an URL. A valid url must not contains html tags or html entities or invalid characters
+and must start with a valid protocol
+Valid protocols are for href attribute http:, https: and mailto: and for src attribute https, mailto:
+and http (only if the protocol of Travel &amp; Notes is http:)
+@param {urlString} the url to validate
+@param {attributeName} the attribute name in witch the url will be placed. must be 'src' or
+null (in this case 'href' is used as default)
+@return {object} a UrlValidationReult with the result of the validation
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourSanitizeUrl ( urlString, attributeName = 'href' ) {
+	let parseResult = ourParser.parseFromString ( '&lt;div>' + urlString + '&lt;/div>', 'text/html' );
+	if ( ! parseResult || '#document' !== parseResult.nodeName ) {
+		return { url : '', errorsString : 'Parsing error' };
+	}
+	let resultNode = parseResult.querySelector ( 'body' ).firstChild;
+	let newUrlString = '';
+	for ( let nodeCounter = 0; nodeCounter &lt; resultNode.childNodes.length; nodeCounter ++ ) {
+		if ( '#text' === resultNode.childNodes [ nodeCounter ].nodeName ) {
+			newUrlString += resultNode.childNodes [ nodeCounter ].nodeValue;
+		}
+		else {
+			return { url : '', errorsString : 'Invalid characters found in the url' };
+		}
+	}
+	newUrlString = newUrlString
+		.replaceAll ( /&lt;/g, '' )
+		.replaceAll ( />/g, '' )
+		.replaceAll ( /"/g, '' )
+		.replaceAll ( /\u0027/g, '' )
+		.replaceAll ( /&amp;lt;/g, '' )
+		.replaceAll ( /&amp;gt;/g, '' )
+		.replaceAll ( /&amp;quot;/g, '' )
+		.replaceAll ( /&amp;apos;/g, '' )
+		.replaceAll ( /%3C/g, '' )
+		.replaceAll ( /%3c/g, '' )
+		.replaceAll ( /%3E/g, '' )
+		.replaceAll ( /%3e/g, '' )
+		.replaceAll ( /%22/g, '' )
+		.replaceAll ( /%27/g, '' );
+	if ( newUrlString !== urlString ) {
+		return { url : '', errorsString : 'Invalid characters found in the url' };
+	}
+
+	let validProtocols = [ 'https:' ];
+	if ( 'http:' === ourProtocol || 'href' === attributeName ) {
+		validProtocols.push ( 'http:' );
+	}
+	if ( 'href' === attributeName ) {
+		validProtocols.push ( 'mailto:' );
+		validProtocols.push ( 'sms:' );
+		validProtocols.push ( 'tel:' );
+		let urlHash = newUrlString.match ( /^#\w*/ );
+		if ( urlHash &amp;&amp; newUrlString === urlHash [ ZERO ] ) {
+			return { url : newUrlString, errorsString : '' };
+		}
+	}
+	if ( 'src' === attributeName ) {
+		validProtocols.push ( 'data:' );
+	}
+	let url = null;
+	try {
+		url = new URL ( newUrlString );
+	}
+	catch ( err ) {
+		return { url : '', errorsString : 'Invalid url string' };
+	}
+	if ( NOT_FOUND === validProtocols.indexOf ( url.protocol ) ) {
+		return { url : '', errorsString : 'Invalid protocol ' + url.protocol };
+	}
+	if ( NOT_FOUND !== [ 'sms:', 'tel:' ].indexOf ( url.protocol ) ) {
+		if ( url.pathname.match ( /^\+[0-9,*,#]*$/ ) ) {
+			return { url : newUrlString, errorsString : '' };
+		}
+	}
+	try {
+		encodeURIComponent ( url.href );
+	}
+	catch ( err ) {
+		return { url : '', errorsString : 'Invalid character in url' };
+	}
+	return { url : newUrlString, errorsString : '' };
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourSanitizeToHtmlElement
+@desc This function transform a string containing html and svg tags into html and svg elements and copy these elements
+as child nodes of the targetNode. Only tags and attributes present in the ourValidityMap variable
+are copied in the targetNode. Url in the href and src attributes must be valid url (see ourSanitizeUrl method)
+@param {string} htmlString the string to transform
+@param targetNode {HTMLElement} the node in witch the created elements are placed
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourSanitizeToHtmlElement ( htmlString, targetNode ) {
+
+	function cloneNode ( clonedNode, newNode ) {
+		let childs = clonedNode.childNodes;
+		for ( let nodeCounter = 0; nodeCounter &lt; childs.length; nodeCounter ++ ) {
+			let currentNode = clonedNode.childNodes [ nodeCounter ];
+			let nodeName = currentNode.nodeName.toLowerCase ( );
+			let validAttributesNames = ourValidityMap.get ( nodeName );
+			if ( validAttributesNames ) {
+				validAttributesNames = validAttributesNames.concat ( [ 'id', 'class', 'dir', 'title' ] );
+				let isSvg = ( 'svg' === nodeName || 'text' === nodeName || 'polyline' === nodeName );
+				let newChildNode = isSvg ? document.createElementNS ( SVG_NS, nodeName ) : document.createElement ( nodeName );
+				validAttributesNames.forEach (
+					validAttributeName => {
+						if ( isSvg ) {
+							if ( currentNode.hasAttributeNS ( null, validAttributeName ) ) {
+								newChildNode.setAttributeNS (
+									null,
+									validAttributeName,
+									currentNode.getAttribute ( validAttributeName )
+								);
+								currentNode.removeAttributeNS ( null, validAttributeName );
+							}
+						}
+						else if ( currentNode.hasAttribute ( validAttributeName ) ) {
+							if ( 'href' === validAttributeName || 'src' === validAttributeName ) {
+								let attributeValue = ourSanitizeUrl (
+									currentNode.getAttribute ( validAttributeName ),
+									validAttributeName
+								).url;
+								if ( '' !== attributeValue ) {
+									newChildNode.setAttribute ( validAttributeName, attributeValue );
+								}
+							}
+							else {
+								newChildNode.setAttribute (
+									validAttributeName,
+									currentNode.getAttribute ( validAttributeName )
+								);
+							}
+						}
+					}
+				);
+				if ( currentNode.hasAttribute ( 'style' ) ) {
+					let styles = currentNode.getAttribute ( 'style' ).split ( ';' );
+					styles.forEach (
+						style => {
+							let styleValues = style.split ( ':' );
+							if (
+								TWO === styleValues.length
+								&amp;&amp;
+								( 'width' === styleValues [ ZERO ].trim ( ) || 'height' === styleValues [ ZERO ].trim ( ) )
+							) {
+								newChildNode.style [ styleValues [ ZERO ].trim ( ) ] = styleValues [ ONE ].trim ( );
+							}
+						}
+					);
+				}
+				newNode.appendChild ( newChildNode );
+				cloneNode ( currentNode, newChildNode );
+			}
+			else if ( '#text' === nodeName ) {
+				newNode.appendChild ( document.createTextNode ( currentNode.nodeValue ) );
+			}
+		}
+	}
+
+	let parseResult = ourParser.parseFromString ( '&lt;div>' + htmlString + '&lt;/div>', 'text/html' );
+	if ( parseResult &amp;&amp; '#document' === parseResult.nodeName ) {
+		cloneNode ( parseResult.querySelector ( 'body' ).firstChild, targetNode );
+	}
+	else {
+		targetNode.textContent = '';
+	}
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourSanitizeToHtmlString
+@desc This function transform a string containing html and svg tags. Tags and attributes not present in the ourValidityMap
+variable are removed. Invalid Url in the href and src attributes are also removed (see ourSanitizeUrl method)
+@param {string} htmlString the string to transform
+@return {object} a HtmlStringValidationReult with the result of the validation
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourSanitizeToHtmlString ( htmlString ) {
+
+	// ! don't use XMLSerializer. Problems with &amp;quot, &amp;apos and &amp;nbsp; and xmlns
+
+	let targetString = '';
+	let errorsString = '';
+
+	function ourStringify ( sourceNode ) {
+		let childs = sourceNode.childNodes;
+		for ( let nodeCounter = 0; nodeCounter &lt; childs.length; nodeCounter ++ ) {
+			let currentNode = sourceNode.childNodes [ nodeCounter ];
+			let nodeName = currentNode.nodeName.toLowerCase ( );
+			let validAttributesNames = ourValidityMap.get ( nodeName );
+			if ( validAttributesNames ) {
+				validAttributesNames = validAttributesNames.concat ( [ 'id', 'class', 'dir', 'title' ] );
+				let isSvg = ( 'svg' === nodeName || 'text' === nodeName || 'polyline' === nodeName );
+				targetString += '&lt;' + nodeName;
+				validAttributesNames.forEach (
+					validAttributeName => {
+						if ( isSvg ) {
+							if ( currentNode.hasAttributeNS ( null, validAttributeName ) ) {
+								targetString += ' ' + validAttributeName + '="' +
+									ourAddHtmlEntities ( currentNode.getAttribute ( validAttributeName ) ) +
+									'"';
+								currentNode.removeAttribute ( validAttributeName );
+							}
+						}
+						else if ( currentNode.hasAttribute ( validAttributeName ) ) {
+							if ( 'href' === validAttributeName || 'src' === validAttributeName ) {
+								let attributeValue = ourSanitizeUrl (
+									currentNode.getAttribute ( validAttributeName ),
+									validAttributeName
+								).url;
+								if ( '' === attributeValue ) {
+									errorsString +=
+										'\nAn invalid url (' +
+										currentNode.getAttribute ( validAttributeName ) +
+										') was removed from a ' +
+										validAttributeName +
+										' attribute';
+								}
+								else {
+									targetString += ' ' + validAttributeName + '="' + attributeValue + '"';
+								}
+								currentNode.removeAttribute ( validAttributeName );
+							}
+							else {
+								targetString += ' ' + validAttributeName + '="' +
+								ourAddHtmlEntities ( currentNode.getAttribute ( validAttributeName ) ) +
+								'"';
+								currentNode.removeAttribute ( validAttributeName );
+							}
+						}
+					}
+				);
+				targetString += '>';
+				ourStringify ( currentNode );
+				targetString += '&lt;/' + nodeName + '>';
+			}
+			else if ( '#text' === nodeName ) {
+				targetString += ourAddHtmlEntities ( currentNode.nodeValue );
+			}
+			else {
+				errorsString += '\nAn invalid tag ' + nodeName + ' was removed';
+			}
+			if ( currentNode.hasAttributes ) {
+				for ( let attCounter = ZERO; attCounter &lt; currentNode.attributes.length; attCounter ++ ) {
+					errorsString +=
+						'\nAn unsecure attribute ' +
+						currentNode.attributes [ attCounter ].name +
+						'="' +
+						currentNode.attributes [ attCounter ].value +
+						'" was removed.';
+				}
+			}
+
+		}
+	}
+
+	let parseResult = ourParser.parseFromString ( '&lt;div>' + htmlString.replace ( '&amp;nbsp;', '\u0a00' ) + '&lt;/div>', 'text/html' );
+	if ( parseResult &amp;&amp; '#document' === parseResult.nodeName ) {
+		ourStringify ( parseResult.querySelector ( 'body' ).firstChild );
+		return { htmlString : targetString, errorsString : errorsString };
+	}
+	return { htmlString : '', errorsString : 'Parsing error' };
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class
+@classdesc This class contains methods to sanitize url and string, filtering html tags and attributes
+present in the string.
+@see {@link theHTMLSanitizer} for the one and only one instance of this class
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+class HTMLSanitizer {
+
+	/**
+	This method verify that a string describe a css color. A valid css color must start with a # followed by 6 hex numbers
+	@param {string} colorString the string to test
+	@return {string} the verified color or null if the given color is invalid
+	*/
+
+	sanitizeToColor ( colorString ) {
+		let newColor = colorString.match ( /^#[0-9,A-F,a-f]{6}$/ );
+		if ( newColor ) {
+			return newColor [ ZERO ];
+		}
+		return null;
+	}
+
+	/**
+	This method verify that a string contains a valid url.
+	A valid url must not contains html tags or html entities or invalid characters
+	and must start with a valid protocol
+	Valid protocols are http:, https: and mailto:.
+	@param {string} urlString the url to validate
+	@param {attributeName} the attribute name in witch the url will be placed. must be 'src' or
+	null (in this case 'href' is used as default)
+	@return {object} a UrlValidationReult with the result of the validation
+	*/
+
+	sanitizeToUrl ( urlString, attributeName ) {
+		return ourSanitizeUrl ( urlString, attributeName );
+	}
+
+	/**
+	Remove all html tags from a string and replace htmlEntities and &lt; > ' " and nbsp chars with others similar unicode chars
+	@param {string} stringToSanitize the string to transform
+	@return {string} a string with html tags removed and htmlEntities and &lt; >' " and nbsp chars replaced
+	*/
+
+	sanitizeToJsString ( stringToSanitize ) {
+		return ourSanitizeToJsString ( stringToSanitize );
+	}
+
+	/**
+	This function transform a string containing html and svg tags into html and svg elements and copy these elements
+	as child nodes of the targetNode. Only tags and attributes present in the ourValidityMap variable
+	are copied in the targetNode. Url in the href and src attributes must be valid url (see ourSanitizeUrl method)
+	@param {string} htmlString the string to transform
+	@param targetNode {HTMLElement} the node in witch the created elements are placed
+	*/
+
+	sanitizeToHtmlElement ( htmlString, targetNode ) { ourSanitizeToHtmlElement ( htmlString, targetNode );	}
+
+	/**
+	This function transform a string containing html and svg tags. Tags and attributes not present in the ourValidityMap
+	variable are removed. Invalid Url in the href and src attributes are also removed (see ourSanitizeUrl method)
+	@param {string} htmlString the string to transform
+	@return {object} a HtmlStringValidationReult with the result of the validation
+	*/
+
+	sanitizeToHtmlString ( htmlString ) { return ourSanitizeToHtmlString ( htmlString ); }
+}
+
+const ourHTMLSanitizer = Object.freeze ( new HTMLSanitizer );
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@desc The one and only one instance of HTMLSanitizer class
+	@type {HTMLSanitizer}
+	@constant
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourHTMLSanitizer as theHTMLSanitizer
+};
+
+/*
+--- End of HTMLSanitizer.js file ----------------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Wed Jan 13 2021 08:34:31 GMT+0100 (GMT+01:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
