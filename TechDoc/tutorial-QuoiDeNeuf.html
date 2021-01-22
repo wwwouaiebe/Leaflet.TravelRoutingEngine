@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Tutorial: QuoiDeNeuf</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Tutorial: QuoiDeNeuf</h1>
+
+    <section>
+
+<header>
+    
+
+    <h2>QuoiDeNeuf</h2>
+</header>
+
+<article>
+    <h2>Quoi de neuf</h2>
+<h3>Quoi de neuf dans la version 1.6.0</h3>
+<ul>
+<li>La gestion des clefs d'accès a été entièrement revue. Celle-ci se fait maintenant via une boite de dialogue et il est
+possible de lire / sauver ces clefs d'accès depuis / vers un fichier protégé par mot de passe.</li>
+<li>L'affichage des erreurs a été amélioré</li>
+<li>Une barre d'outils permettant des gérer les fonds de cartes a été ajoutée.</li>
+<li>Un viewer léger a été créé. Celui-ci permet la visualisation d'un voyage sur un appareil ancien qui ne comprend pas
+toutes les nouveautés de JavaScript</li>
+</ul>
+<p>De nombreuses modifications techniques ont également été faites:</p>
+<ul>
+<li>Tout le code a été migré vers ES6 et utilise les modules ES6 au lieu de modules nodeJS</li>
+<li>eslint est utilisé pour vérifier la qualité du code</li>
+<li>toutes les boites de dialogue sont basées sur l'utilisation de Promise</li>
+<li>les mises à jour de l'interface utilisateur et de la carte se font via des events, ce qui réduit fortement
+les dépendances dans le code.</li>
+</ul>
+<h3>Quoi de neuf dans la version 1.7.0</h3>
+<ul>
+<li>Lorsque OpenRouteService ou GraphHopper sont utilisés comme fournisseurs d'itinéraire, il est également possible d'afficher le profil de la route.</li>
+<li>Lorsque un trajet entre deux points est fait avec leaflet.TravelNotesPolyline ce trajet n'est plus représente sous forme de ligne droite,
+mais bien sous forme d'un segment de grand cercle. Voir la documentation de <a href="https://github.com/wwwouaiebe/leaflet.TravelNotesPolyline/blob/master/README.md">leaflet.TravelNotesPolyline</a></li>
+<li>Il est également possible de tracer des cercles avec leaflet.TravelNotesPolyline. Voir la documentation de <a href="https://github.com/wwwouaiebe/leaflet.TravelNotesPolyline/blob/master/README.md">leaflet.TravelNotesPolyline</a></li>
+</ul>
+<h3>Quoi de neuf dans la version 1.8.0</h3>
+<ul>
+<li>Ajouter un point de passage à un trajet a été amélioré. Il suffit maintenant d'amener la souris sur le trajet pour voir apparaître un point de passage temporaire.
+En faisant ensuite un glisser / déposer de celui-ci, le point de passage est ajouté au trajet.</li>
+</ul>
+<h3>Quoi de neuf dans la version 1.9.0</h3>
+<ul>
+<li>Il est maintenant possible d'imprimer les cartes d'un trajet.</li>
+</ul>
+<h3>Quoi de neuf dans la version 1.10.0</h3>
+<ul>
+<li>Un nouveau fournisseur de service, basé sur Mapzen Valhalla, a été ajouté: Stadia Maps</li>
+<li>Un bouton permettant de recharger les clefs d'accès a été ajouté dans la boite de dialogue de gestion des clefs d'accès</li>
+<li>Un message d'erreur est affiché quand un problème survient lors de la lecture du fichier des clefs d'accès</li>
+<li>Quelques bugs sont corrigés</li>
+</ul>
+<h3>Quoi de neuf dans la version 1.11.0</h3>
+<ul>
+<li>Les notes de trajet prédéfinie &quot;Icône SVG depuis OSM&quot; ont été améliorées pour les entrées et sorties des rond-points</li>
+<li>Il est possible de créer une note pour toutes les manoeuvres d'un trajet en une opération</li>
+<li>L'affichage des erreurs lors de la lecture du fichier &quot;APIKeys&quot; a été amélioré</li>
+<li>Quelques bugs sont corrigés ( Issues #113, #115, #116, #117 et #118)</li>
+</ul>
+<h3>Quoi de neuf dans la version 1.12.0</h3>
+<ul>
+<li>L'interface utilisateur a été modifiée. Consultez le <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/fr/GuideUtilisateurFR.md">guide pour les utilisateurs - fr </a>.</li>
+<li>Toutes les commandes sont uniformisées. Chaque objet (carte, route, note, point de passage, manoeuvre) est créé, modifié ou supprimé via des commandes
+dans des menus contextuels qui sont disponibles sur la carte ou dans l'interface utilisateur.</li>
+<li>Les performances sont améliorées. L'utilisation de la mémoire a fortement diminué et les temps de chargement réduits. Cela est particulièrement sensible pour de longs voyages.</li>
+<li><a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/TechDoc/">Tout le code est documenté</a></li>
+</ul>
+<h3>Quoi de neuf dans la version 1.13.0</h3>
+<ul>
+<li>Il est possible de rechercher des points d'intérêt dans OpenStreetMap.</li>
+<li>Des notes peuvent être créées à partir des résultats de recherche dans OpenStreetMap.</li>
+<li>De nouvelles notes prédéfinies ont été ajoutées. Il y a maintenant plus de 70 notes prédéfinies.</li>
+<li>L'arrière-plan des notes peut être transparent.</li>
+<li>Toutes les icônes des notes prédéfinies sont désormais en svg.</li>
+</ul>
+<h3>Quoi de neuf dans la version 2.0.0</h3>
+<p>Pour éviter des <a href="https://fr.wikipedia.org/wiki/Cross-site_scripting">attaques xss</a>, notamment lors de l'échange de fichiers, toute la sécurité de l'apps a été revue,
+ce qui entraine un certain nombre de limitations et de modifications:</p>
+<ul>
+<li><a href="https://developer.mozilla.org/fr/docs/Web/HTTP/CSP">Content Security Policy</a> est activé par défaut via une balise &lt;meta&gt; dans le fichier index.html.
+Grâce à cela, il n'est plus possible d'exécuter du javascript depuis un autre site que celui où est installé Travel &amp; Notes, d'exécuter des scripts en inline
+dans le html ni de télécharger des images ou des fichiers depuis un autre site.
+Si vous en avez la possibilité, il est cependant préférable d'activer Content Securty Policy via un header installé par le serveur plutôt que via une balise &lt;meta&gt;.</li>
+<li>les balises html pouvant être utilisées lors de la création des notes sont restreintes, de même que les attributs attachés à ces balises html.
+Consultez le <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/fr/GuideUtilisateurFR.md#AddHtmltext">guide pour les utilisateurs - fr </a>.</li>
+<li>lors de l'ouverture d'un fichier de voyage réalisé avec une version antérieure, toutes les balises et les attributs non autorisés sont effacé·e·s.</li>
+<li>afin d'éviter une attaque xss via un lien envoyé par mail, il n'est plus possible d'ouvrir automatiquement un fichier de voyage via l'url de l'apps quand ce fichier
+de voyage provient d'un autre site, même si Content Security Policy est complètement désactivé.</li>
+<li>il n'est plus possible de définir des styles en inline. Si vous désirez créer un style personnalisé, il faut le créer dans un fichier css et importer celui-ci
+avec une balise &lt;link&gt;</li>
+<li>il n'est évidemment plus possible d'utiliser une balise &lt;script&gt; ni aucun gestionnaire d'événements attaché à une balise html (onmouseover, onclick...).</li>
+<li>les liens présents dans les attributs href et src doivent être corrects et complets. Dans un attribut src, le protocole ne peut être que https: (et http: si l'apps
+est installée sur un site http:). Dans les attributs href, le protocole doit être http:, https:, mailto:, sms: ou tel:. En outre, les liens sms: et tel: doivent commencer par
+un + et ne peuvent comprendre que les caractères #, * espace et des chiffres de 0 à 9.</li>
+<li>il n'est plus possible d'entrer les clefs API des fournisseurs de service via des paramètres de l'url.</li>
+</ul>
+<p>En outre, les améliorations suivantes on été apportées:</p>
+<ul>
+<li>les icônes SVG depuis OSM contiennent le numéro du point-noeud lorsque l'icône se trouve sur ce point-noeud et que l'itinéraire est calculé pour un vélo (N.B. les
+points-noeuds sont une particularité des itinéraires vélo en Belgique, aux Pays-Bas et partiellement en Allemagne).</li>
+<li>il est nécessaire de nommer le voyage avant de pouvoir sauver celui-ci dans un fichier</li>
+<li>une solution temporaire a été créée pour contourner les erreurs de noms de commune retournés par Nominatim.</li>
+<li>une prévisualisation de la note en cours d'édition a été ajoutée à la boite d'édition des notes.</li>
+<li>il est possible de cacher ou activer certaines parties de cette même boite d'édition.</li>
+</ul>
+<h3>Quoi de neuf dans la version 2.1.0</h3>
+<p>La version 2.1.0. est avant tout une version contenant des changements pour les dévelopeurs:</p>
+<ul>
+<li>tous les repositories de plugins on été fusionnés dans TravelNotes et il n'y a donc plus qu'un seul repository. Grâce à celà,
+les tailles de certains plugins ont été considérablement réduites.</li>
+<li>@mapbox\polyline n'est plus utilisé pour la compression des données et a été remplacé par un dévelopement
+interne, ce qui permet également de réduire fortement la taille des fichiers de donnée..</li>
+</ul>
+</article>
+
+</section>
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-GraphHopperRouteProvider-GraphHopperRouteProvider.html">GraphHopperRouteProvider</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapboxRouteProvider-MapboxRouteProvider.html">MapboxRouteProvider</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MapzenValhallaRouteProvider-MapzenValhallaRouteProvider.html">MapzenValhallaRouteProvider</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OpenRouteServiceRouteProvider-OpenRouteServiceRouteProvider.html">OpenRouteServiceRouteProvider</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-OsrmRouteProvider-OsrmRouteProvider.html">OsrmRouteProvider</a></li><li><a href="module-OsrmTextInstructions-OsrmTextInstructions.html">OsrmTextInstructions</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PolylineRouteProvider-PolylineRouteProvider.html">PolylineRouteProvider</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-PublicTransportRouteProvider-PublicTransportRouteProvider.html">PublicTransportRouteProvider</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SphericalTrigonometry-SphericalTrigonometry.html">SphericalTrigonometry</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-WhatsNew.html">WhatsNew</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-QuoiDeNeuf.html">QuoiDeNeuf</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#theOsrmTextInstructions">theOsrmTextInstructions</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#thePolylineEncoder">thePolylineEncoder</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theSphericalTrigonometry">theSphericalTrigonometry</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Jan 22 2021 11:40:01 GMT+0100 (GMT+01:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

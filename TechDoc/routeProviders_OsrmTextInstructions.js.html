@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TravelNotes: Source: routeProviders/OsrmTextInstructions.js</title>
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+   <!--link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css"-->
+    <link type="text/css" rel="stylesheet" href="styles/TravelNotes.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: routeProviders/OsrmTextInstructions.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+Copyright - 2017 2021 - wwwouaiebe - Contact: https://www.ouaie.be/
+
+This  program is free software;
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation;
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/*
+Changes:
+	- v2.1.0:
+		- created
+Doc reviewed ...
+Tests ...
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@file OsrmTextInstructions.js
+@copyright Copyright - 2017 2021 - wwwouaiebe - Contact: https://www.ouaie.be/
+@license GNU General Public License
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@module OsrmTextInstructions
+@see https://github.com/Project-OSRM/osrm-text-instructions
+
+@desc This file is an adaptation for ES6 of the osrm-text-instruction project
+The osrmTextInstructions object code is the same than the code in the osrm-text-instruction/index.js.
+If changes are done in osrm-text-instruction, they can be reported there without major problems.
+Language json files are installed by the grunt.js file. Adapt this file if you will more languages.
+Don't rename variables for compatibility with osrm-text-instructions
+
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+import { ZERO, ONE, NOT_FOUND, HTTP_STATUS_OK } from '../util/Constants.js';
+
+const OSRM_LANGUAGES = [
+	'ar',
+	'da',
+	'de',
+	'en',
+	'eo',
+	'es',
+	'es-ES',
+	'fi',
+	'fr',
+	'he',
+	'hu',
+	'id',
+	'it',
+	'ja',
+	'ko',
+	'my',
+	'nl',
+	'no',
+	'pl',
+	'pt-BR',
+	'pt-PT',
+	'ro',
+	'ru',
+	'sl',
+	'sv',
+	'tr',
+	'uk',
+	'vi',
+	'yo',
+	'zh-Hans'
+];
+
+let languages =
+{
+	supportedCodes : [ ],
+	instructions : {},
+	grammars : {},
+	abbreviations : {}
+};
+
+// working only with v5
+const version = 'v5';
+
+// references to avoid rewriting ourOsrmTextInstructions
+let instructions = languages.instructions;
+let grammars = languages.grammars;
+let abbreviations = languages.abbreviations;
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourDirectionFromDegree
+@desc new version of the OsrmTextInstructions.directionFromDegree ( ) method
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourDirectionFromDegree ( language, degree ) {
+	const NNE = 20;
+	const ENE = 70;
+	const ESE = 110;
+	const SSE = 160;
+	const SSW = 200;
+	const WSW = 250;
+	const WNW = 290;
+	const NNW = 340;
+	const NORTH = 360;
+
+	if ( ! degree &amp;&amp; ZERO !== degree ) {
+		return '';
+	}
+	else if ( ZERO > degree &amp;&amp; NORTH &lt; degree ) {
+		throw new Error ( 'Degree ' + degree + ' invalid' );
+	}
+	else if ( NNE >= degree ) {
+		return instructions[ language ][ version ].constants.direction.north;
+	}
+	else if ( ENE > degree ) {
+		return instructions[ language ][ version ].constants.direction.northeast;
+	}
+	else if ( ESE >= degree ) {
+		return instructions[ language ][ version ].constants.direction.east;
+	}
+	else if ( SSE > degree ) {
+		return instructions[ language ][ version ].constants.direction.southeast;
+	}
+	else if ( SSW >= degree ) {
+		return instructions[ language ][ version ].constants.direction.south;
+	}
+	else if ( WSW > degree ) {
+		return instructions[ language ][ version ].constants.direction.southwest;
+	}
+	else if ( WNW >= degree ) {
+		return instructions[ language ][ version ].constants.direction.west;
+	}
+	else if ( NNW > degree ) {
+		return instructions[ language ][ version ].constants.direction.northwest;
+	}
+	else {
+		return instructions[ language ][ version ].constants.direction.north;
+	}
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourFetchJson
+@desc ...
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+async function ourFetchJson ( data, lngCode ) {
+	let response = await fetch ( 'TravelNotesProviders/languages/' + data + '/' + lngCode + '.json' );
+	if ( HTTP_STATUS_OK === response.status &amp;&amp; response.ok ) {
+		let result = await response.json ( );
+		languages [ data ] [ lngCode ] = result;
+	}
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class OsrmTextInstructions
+@classdesc This class contains methods to write / translate moneuver instructions in MapboxRouteProvider and OsrmRouteProvider
+@see {@link theOsrmTextInstructions} for the one and only one instance of this class
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+class OsrmTextInstructions 	{
+	constructor ( ) {
+		this.abbreviations = abbreviations;
+		Object.freeze ( this );
+	}
+
+	loadLanguage ( lng ) {
+		let language = NOT_FOUND === OSRM_LANGUAGES.indexOf ( lng ) ? 'en' : lng;
+		[ 'instructions', 'grammars', 'abbreviations' ].forEach (
+			data => ourFetchJson ( data, language )
+		);
+		return language;
+	}
+
+	capitalizeFirstLetter ( language, string ) {
+		return string.charAt ( ZERO ).toLocaleUpperCase ( language ) + string.slice ( ONE );
+	}
+
+	ordinalize ( language, number ) {
+		return instructions[ language ][ version ].constants.ordinalize[ number.toString () ] || '';
+	}
+
+	directionFromDegree ( language, degree ) {
+		return ourDirectionFromDegree ( language, degree );
+	}
+
+	laneConfig ( step ) {
+		if ( ! step.intersections || ! step.intersections[ ZERO ].lanes ) {
+			throw new Error ( 'No lanes object' );
+		}
+		let config = [];
+		let currentLaneValidity = null;
+		step.intersections[ ZERO ].lanes.forEach ( function ( lane ) {
+			if ( null === currentLaneValidity || currentLaneValidity !== lane.valid ) {
+				if ( lane.valid ) {
+					config.push ( 'o' );
+				}
+				else {
+					config.push ( 'x' );
+				}
+				currentLaneValidity = lane.valid;
+			}
+		} );
+		return config.join ( '' );
+	}
+
+	/* eslint-disable-next-line complexity */
+	getWayName ( language, step, options ) {
+		let classes = options ? options.classes || [] : [];
+		if ( 'object' !== typeof step ) {
+			throw new Error ( 'step must be an Object' );
+		}
+		if ( ! Array.isArray ( classes ) ) {
+			throw new Error ( 'classes must be an Array or undefined' );
+		}
+		let wayName = '';
+		let stepName = step.name || '';
+		let ref = ( step.ref || '' ).split ( ';' )[ ZERO ];
+		if ( stepName === step.ref ) {
+			stepName = '';
+		}
+		stepName = stepName.replace ( ' (' + step.ref + ')', '' );
+		let wayMotorway = NOT_FOUND !== classes.indexOf ( 'motorway' );
+		if ( stepName &amp;&amp; ref &amp;&amp; stepName !== ref &amp;&amp; ! wayMotorway ) {
+			let phrase = instructions[ language ][ version ].phrase[ 'name and ref' ] ||
+				instructions.en[ version ].phrase[ 'name and ref' ];
+			wayName = this.tokenize ( language, phrase, {
+				name : stepName,
+				ref : ref
+			}, options );
+		}
+		else if ( stepName &amp;&amp; ref &amp;&amp; wayMotorway &amp;&amp; ( /\d/ ).test ( ref ) ) {
+			wayName = options &amp;&amp; options.formatToken ? options.formatToken ( 'ref', ref ) : ref;
+		}
+		else if ( ! stepName &amp;&amp; ref ) {
+			wayName = options &amp;&amp; options.formatToken ? options.formatToken ( 'ref', ref ) : ref;
+		}
+		else {
+			wayName = options &amp;&amp; options.formatToken ? options.formatToken ( 'name', stepName ) : stepName;
+		}
+		return wayName;
+	}
+
+	/* eslint-disable-next-line complexity, max-statements */
+	compile ( language, step, opts ) {
+		if ( ! step.maneuver ) {
+			throw new Error ( 'No step maneuver provided' );
+		}
+		let options = opts || {};
+		let type = step.maneuver.type;
+		let modifier = step.maneuver.modifier;
+		let mode = step.mode;
+		let side = step.driving_side;
+		if ( ! type ) {
+			throw new Error ( 'Missing step maneuver type' );
+		}
+		if ( 'depart' !== type &amp;&amp; 'arrive' !== type &amp;&amp; ! modifier ) {
+			throw new Error ( 'Missing step maneuver modifier' );
+		}
+		if ( ! instructions[ language ][ version ][ type ] ) {
+			/* eslint-disable-next-line no-console */
+			console.log ( 'Encountered unknown instruction type: ' + type );
+			type = 'turn';
+		}
+		let instructionObject = null;
+		if ( instructions[ language ][ version ].modes[ mode ] ) {
+			instructionObject = instructions[ language ][ version ].modes[ mode ];
+		}
+		else {
+			let omitSide = 'off ramp' === type &amp;&amp; ZERO &lt;= modifier.indexOf ( side );
+			if ( instructions[ language ][ version ][ type ][ modifier ] &amp;&amp; ! omitSide ) {
+				instructionObject = instructions[ language ][ version ][ type ][ modifier ];
+			}
+			else {
+				instructionObject = instructions[ language ][ version ][ type ].default;
+			}
+		}
+		let laneInstruction = null;
+		switch ( type ) {
+		case 'use lane' :
+			laneInstruction = instructions[ language ][ version ].constants.lanes[ this.laneConfig ( step ) ];
+			if ( ! laneInstruction ) {
+				instructionObject = instructions[ language ][ version ][ 'use lane' ].no_lanes;
+			}
+			break;
+		case 'rotary' :
+		case 'roundabout' :
+			if ( step.rotary_name &amp;&amp; step.maneuver.exit &amp;&amp; instructionObject.name_exit ) {
+				instructionObject = instructionObject.name_exit;
+			}
+			else if ( step.rotary_name &amp;&amp; instructionObject.name ) {
+				instructionObject = instructionObject.name;
+			}
+			else if ( step.maneuver.exit &amp;&amp; instructionObject.exit ) {
+				instructionObject = instructionObject.exit;
+			}
+			else {
+				instructionObject = instructionObject.default;
+			}
+			break;
+		default :
+		}
+		let wayName = this.getWayName ( language, step, options );
+		let instruction = instructionObject.default;
+		if ( step.destinations &amp;&amp; step.exits &amp;&amp; instructionObject.exit_destination ) {
+			instruction = instructionObject.exit_destination;
+		}
+		else if ( step.destinations &amp;&amp; instructionObject.destination ) {
+			instruction = instructionObject.destination;
+		}
+		else if ( step.exits &amp;&amp; instructionObject.exit ) {
+			instruction = instructionObject.exit;
+		}
+		else if ( wayName &amp;&amp; instructionObject.name ) {
+			instruction = instructionObject.name;
+		}
+		else if ( options.waypointName &amp;&amp; instructionObject.named ) {
+			instruction = instructionObject.named;
+		}
+		let destinations = step.destinations &amp;&amp; step.destinations.split ( ': ' );
+		let destinationRef = destinations &amp;&amp; destinations[ ZERO ].split ( ',' )[ ZERO ];
+		let destination = destinations &amp;&amp; destinations[ ONE ] &amp;&amp; destinations[ ONE ].split ( ',' )[ ZERO ];
+		let firstDestination = '';
+		if ( destination &amp;&amp; destinationRef ) {
+			firstDestination = destinationRef + ': ' + destination;
+		}
+		else {
+			firstDestination = destinationRef || destination || '';
+		}
+
+		let nthWaypoint =
+			ZERO &lt;= options.legIndex &amp;&amp; options.legIndex !== options.legCount - ONE
+				?
+				this.ordinalize ( language, options.legIndex + ONE )
+				:
+				'';
+		let replaceTokens = {
+			/* eslint-disable-next-line camelcase */
+			way_name : wayName,
+			destination : firstDestination,
+			exit : ( step.exits || '' ).split ( ';' )[ ZERO ],
+			/* eslint-disable-next-line camelcase */
+			exit_number : this.ordinalize ( language, step.maneuver.exit || ONE ),
+			/* eslint-disable-next-line camelcase */
+			rotary_name : step.rotary_name,
+			/* eslint-disable-next-line camelcase */
+			lane_instruction : laneInstruction,
+			modifier : instructions[ language ][ version ].constants.modifier[ modifier ],
+			direction : this.directionFromDegree ( language, step.maneuver.bearing_after ),
+			nth : nthWaypoint,
+			/* eslint-disable-next-line camelcase */
+			waypoint_name : options.waypointName
+		};
+		return this.tokenize ( language, instruction, replaceTokens, options );
+	}
+
+	grammarize ( language, nameToProceed, grammar ) {
+		if ( grammar &amp;&amp; grammars &amp;&amp; grammars[ language ] &amp;&amp; grammars[ language ][ version ] ) {
+			let rules = grammars[ language ][ version ][ grammar ];
+			if ( rules ) {
+				let nameWithSpace = ' ' + nameToProceed + ' ';
+				let flags = grammars[ language ].meta.regExpFlags || '';
+				rules.forEach ( function ( rule ) {
+					let re = new RegExp ( rule[ ZERO ], flags );
+					nameWithSpace = nameWithSpace.replace ( re, rule[ ONE ] );
+				} );
+
+				return nameWithSpace.trim ();
+			}
+		}
+		return nameToProceed;
+	}
+
+	/* eslint-disable-next-line max-params */
+	tokenize ( language, instruction, tokens, options ) {
+		let that = this;
+		let startedWithToken = false;
+		let output = instruction.replace (
+			/* eslint-disable-next-line max-params */
+			/\{(\w+)(?::(\w+))?\}/g, function ( token, tag, grammar, offset ) {
+				let value = tokens[ tag ];
+				if ( 'undefined' === typeof value ) {
+					return token;
+				}
+				value = that.grammarize ( language, value, grammar );
+				if ( ZERO === offset &amp;&amp; instructions[ language ].meta.capitalizeFirstLetter ) {
+					startedWithToken = true;
+					value = that.capitalizeFirstLetter ( language, value );
+				}
+				if ( options &amp;&amp; options.formatToken ) {
+					value = options.formatToken ( tag, value );
+				}
+				return value;
+			}
+		)
+			.replace ( / {2}/g, ' ' );
+		if ( ! startedWithToken &amp;&amp; instructions[ language ].meta.capitalizeFirstLetter ) {
+			return this.capitalizeFirstLetter ( language, output );
+		}
+		return output;
+	}
+}
+
+const ourOsrmTextInstructions = new OsrmTextInstructions ( );
+
+export {
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@desc The one and only one instance of OsrmTextInstructions class
+	@type {OsrmTextInstructions}
+	@constant
+	@global
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	ourOsrmTextInstructions as theOsrmTextInstructions
+};
+
+/*
+--- End of OsrmTextInstructions.js file ---------------------------------------------------------------------------------------
+*/</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-GraphHopperRouteProvider-GraphHopperRouteProvider.html">GraphHopperRouteProvider</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapboxRouteProvider-MapboxRouteProvider.html">MapboxRouteProvider</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MapzenValhallaRouteProvider-MapzenValhallaRouteProvider.html">MapzenValhallaRouteProvider</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OpenRouteServiceRouteProvider-OpenRouteServiceRouteProvider.html">OpenRouteServiceRouteProvider</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-OsrmRouteProvider-OsrmRouteProvider.html">OsrmRouteProvider</a></li><li><a href="module-OsrmTextInstructions-OsrmTextInstructions.html">OsrmTextInstructions</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PolylineRouteProvider-PolylineRouteProvider.html">PolylineRouteProvider</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-PublicTransportRouteProvider-PublicTransportRouteProvider.html">PublicTransportRouteProvider</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SphericalTrigonometry-SphericalTrigonometry.html">SphericalTrigonometry</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-WhatsNew.html">WhatsNew</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-QuoiDeNeuf.html">QuoiDeNeuf</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#theOsrmTextInstructions">theOsrmTextInstructions</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#thePolylineEncoder">thePolylineEncoder</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theSphericalTrigonometry">theSphericalTrigonometry</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<!--footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Jan 22 2021 11:40:00 GMT+0100 (GMT+01:00)
+</footer-->
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
