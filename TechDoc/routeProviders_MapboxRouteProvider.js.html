@@ -74,270 +74,263 @@ import { theOsrmTextInstructions } from '../routeProviders/OsrmTextInstructions.
 import { ICON_LIST } from '../routeProviders/IconList.js';
 import { ZERO, ONE, TWO, LAT_LNG, HTTP_STATUS_OK } from '../util/Constants.js';
 
+const OUR_MAPBOX_LAT_LNG_ROUND = 6;
+
+let ourProviderKey = '';
+let ourUserLanguage = 'fr';
+let ourRoute = null;
+
 /**
 @------------------------------------------------------------------------------------------------------------------------------
 
-@function ourNewMapboxRouteProvider
-@desc constructor for MapboxRouteProvider object
-@return {MapboxRouteProvider} an instance of MapboxRouteProvider object
+@function ourParseResponse
+@desc parse the response from the provider and add the received itinerary to the ourRoute itinerary
+@param {Object} response the itinerary received from the provider
+@param {function} onOk a function to call when the response is parsed correctly
+@param {function} onError a function to call when an error occurs
 @private
 
 @------------------------------------------------------------------------------------------------------------------------------
 */
 
-function ourNewMapboxRouteProvider ( ) {
+function ourParseResponse ( response, onOk, onError ) {
 
-	const MAPBOX_LAT_LNG_ROUND = 6;
+	if ( 'Ok' !== response.code ) {
+		onError ( new Error ( 'Response code not ok' ) );
+		return;
+	}
 
-	let myProviderKey = '';
-	let myUserLanguage = 'fr';
-	let myRoute = null;
+	if ( ZERO === response.routes.length ) {
+		onError ( new Error ( 'Route not found' ) );
+		return;
+	}
 
-	/**
-	@--------------------------------------------------------------------------------------------------------------------------
+	ourRoute.itinerary.itineraryPoints.removeAll ( );
+	ourRoute.itinerary.maneuvers.removeAll ( );
+	ourRoute.itinerary.hasProfile = false;
+	ourRoute.itinerary.ascent = ZERO;
+	ourRoute.itinerary.descent = ZERO;
+	response.routes [ ZERO ].geometry =
+		thePolylineEncoder.decode ( response.routes [ ZERO ].geometry, [ OUR_MAPBOX_LAT_LNG_ROUND, OUR_MAPBOX_LAT_LNG_ROUND ] );
+	response.routes [ ZERO ].legs.forEach (
+		function ( leg ) {
+			let lastPointWithDistance = ZERO;
+			leg.steps.forEach (
+				function ( step ) {
+					step.geometry = thePolylineEncoder.decode (
+						step.geometry,
+						[ OUR_MAPBOX_LAT_LNG_ROUND, OUR_MAPBOX_LAT_LNG_ROUND ]
+					);
+					if (
+						'arrive' === step.maneuver.type
+						&amp;&amp;
+						TWO === step.geometry.length
+						&amp;&amp;
+						step.geometry [ ZERO ] [ ZERO ] === step.geometry [ ONE ] [ ZERO ]
+						&amp;&amp;
+						step.geometry [ ZERO ] [ ONE ] === step.geometry [ ONE ] [ ONE ]
+					) {
+						step.geometry.pop ( );
+					}
 
-	@function myParseResponse
-	@desc parse the response from the provider and add the received itinerary to the myRoute itinerary
-	@param {Object} response the itinerary received from the provider
-	@param {function} returnOnOk a function to call when the response is parsed correctly
-	@param {function} returnOnError a function to call when an error occurs
-	@private
+					let maneuver = window.TaN.maneuver;
+					maneuver.iconName =
+						ICON_LIST [ step.maneuver.type ]
+							?
+							ICON_LIST [ step.maneuver.type ] [ step.maneuver.modifier ]
+							||
+							ICON_LIST [ step.maneuver.type ] [ 'default' ]
+							:
+							ICON_LIST [ 'default' ] [ 'default' ];
 
-	@--------------------------------------------------------------------------------------------------------------------------
-	*/
+					maneuver.instruction = theOsrmTextInstructions.compile ( ourUserLanguage, step );
+					maneuver.duration = step.duration;
+					let distance = ZERO;
+					for (
+						let geometryCounter = ZERO;
+						( ONE === step.geometry.length )
+							?
+							( ONE > geometryCounter )
+							:
+							( geometryCounter &lt; step.geometry.length );
+						geometryCounter ++ ) {
+						let itineraryPoint = window.TaN.itineraryPoint;
+						itineraryPoint.latLng = [
+							step.geometry [ geometryCounter ] [ ZERO ],
+							step.geometry [ geometryCounter ] [ ONE ]
+						];
 
-	function myParseResponse ( response, returnOnOk, returnOnError ) {
-
-		if ( 'Ok' !== response.code ) {
-			returnOnError ( new Error ( 'Response code not ok' ) );
-		}
-
-		if ( ZERO === response.routes.length ) {
-			returnOnError ( new Error ( 'Route not found' ) );
-		}
-
-		myRoute.itinerary.itineraryPoints.removeAll ( );
-		myRoute.itinerary.maneuvers.removeAll ( );
-		myRoute.itinerary.hasProfile = false;
-		myRoute.itinerary.ascent = ZERO;
-		myRoute.itinerary.descent = ZERO;
-		response.routes [ ZERO ].geometry =
-			thePolylineEncoder.decode ( response.routes [ ZERO ].geometry, [ MAPBOX_LAT_LNG_ROUND, MAPBOX_LAT_LNG_ROUND ] );
-		response.routes [ ZERO ].legs.forEach (
-			function ( leg ) {
-				let lastPointWithDistance = ZERO;
-				leg.steps.forEach (
-					function ( step ) {
-						step.geometry = thePolylineEncoder.decode (
-							step.geometry,
-							[ MAPBOX_LAT_LNG_ROUND, MAPBOX_LAT_LNG_ROUND ]
-						);
-						if (
-							'arrive' === step.maneuver.type
-							&amp;&amp;
-							TWO === step.geometry.length
-							&amp;&amp;
-							step.geometry [ ZERO ] [ ZERO ] === step.geometry [ ONE ] [ ZERO ]
-							&amp;&amp;
-							step.geometry [ ZERO ] [ ONE ] === step.geometry [ ONE ] [ ONE ]
-						) {
-							step.geometry.pop ( );
-						}
-
-						let maneuver = window.TaN.maneuver;
-						maneuver.iconName =
-							ICON_LIST [ step.maneuver.type ]
+						itineraryPoint.distance =
+							leg.annotation.distance [ lastPointWithDistance ]
 								?
-								ICON_LIST [ step.maneuver.type ] [ step.maneuver.modifier ]
-								||
-								ICON_LIST [ step.maneuver.type ] [ 'default' ]
-								:
-								ICON_LIST [ 'default' ] [ 'default' ];
-
-						maneuver.instruction = theOsrmTextInstructions.compile ( myUserLanguage, step );
-						maneuver.duration = step.duration;
-						let distance = ZERO;
-						for (
-							let geometryCounter = ZERO;
-							( ONE === step.geometry.length )
-								?
-								( ONE > geometryCounter )
-								:
-								( geometryCounter &lt; step.geometry.length );
-							geometryCounter ++ ) {
-							let itineraryPoint = window.TaN.itineraryPoint;
-							itineraryPoint.latLng = [
-								step.geometry [ geometryCounter ] [ ZERO ],
-								step.geometry [ geometryCounter ] [ ONE ]
-							];
-
-							itineraryPoint.distance =
 								leg.annotation.distance [ lastPointWithDistance ]
-									?
-									leg.annotation.distance [ lastPointWithDistance ]
-									:
-									ZERO;
-							myRoute.itinerary.itineraryPoints.add ( itineraryPoint );
-							if ( geometryCounter !== step.geometry.length - ONE ) {
-								distance += itineraryPoint.distance;
-								lastPointWithDistance ++;
-							}
-							if ( ZERO === geometryCounter ) {
-								maneuver.itineraryPointObjId = itineraryPoint.objId;
-							}
+								:
+								ZERO;
+						ourRoute.itinerary.itineraryPoints.add ( itineraryPoint );
+						if ( geometryCounter !== step.geometry.length - ONE ) {
+							distance += itineraryPoint.distance;
+							lastPointWithDistance ++;
 						}
-						maneuver.distance = distance;
-						myRoute.itinerary.maneuvers.add ( maneuver );
+						if ( ZERO === geometryCounter ) {
+							maneuver.itineraryPointObjId = itineraryPoint.objId;
+						}
 					}
-				);
-			}
-		);
-
-		let wayPointsIterator = myRoute.wayPoints.iterator;
-		response.waypoints.forEach (
-			function ( wayPoint ) {
-				if ( ! wayPointsIterator.done ) {
-					wayPointsIterator.value.latLng = [ wayPoint.location [ ONE ], wayPoint.location [ ZERO ] ];
-				}
-			}
-		);
-
-		returnOnOk ( myRoute );
-	}
-
-	/**
-	@--------------------------------------------------------------------------------------------------------------------------
-
-	@function myGetUrl
-	@desc gives the url to call
-	@return {string} a string with the url, wayPoints, transitMode, user language and API key
-	@private
-
-	@--------------------------------------------------------------------------------------------------------------------------
-	*/
-
-	function myGetUrl ( ) {
-		let wayPointsString = null;
-		myRoute.wayPoints.forEach (
-			wayPoint => {
-				wayPointsString = wayPointsString ? wayPointsString + ';' : '';
-				wayPointsString +=
-					wayPoint.lng.toFixed ( LAT_LNG.fixed ) + ',' +
-					wayPoint.lat.toFixed ( LAT_LNG.fixed );
-			}
-		);
-
-		let profile = '';
-		switch ( myRoute.itinerary.transitMode ) {
-		case 'car' :
-			profile = 'mapbox/driving/';
-			break;
-		case 'bike' :
-			profile = 'mapbox/cycling/';
-			break;
-		case 'pedestrian' :
-			profile = 'mapbox/walking/';
-			break;
-		default :
-			console.log ( 'invalid transitMode' );
-			return;
-		}
-		return 'https://api.mapbox.com/directions/v5/' +
-			profile +
-			wayPointsString +
-			'?geometries=polyline6&amp;overview=full&amp;steps=true&amp;annotations=distance&amp;access_token=' +
-			myProviderKey;
-	}
-
-	/*
-	@--------------------------------------------------------------------------------------------------------------------------
-
-	@function myGetRoute
-	@desc call the provider, wait for the response and then parse the provider response
-	@param {function} onOk a function to pass to the myParseResponse
-	@param {function} onError a function to pass to myParseResponse or to call when an error occurs
-	@private
-
-	@--------------------------------------------------------------------------------------------------------------------------
-	*/
-
-	function myGetRoute ( onOk, onError ) {
-		fetch ( myGetUrl ( ) )
-			.then (
-				response => {
-					if ( HTTP_STATUS_OK === response.status &amp;&amp; response.ok ) {
-						response.json ( )
-							.then ( result => myParseResponse ( result, onOk, onError ) );
-					}
-					else {
-						onError ( new Error ( 'Invalid status ' + response.status ) );
-					}
+					maneuver.distance = distance;
+					ourRoute.itinerary.maneuvers.add ( maneuver );
 				}
 			);
-	}
-
-	/**
-	@--------------------------------------------------------------------------------------------------------------------------
-
-	@function myGetPromiseRoute
-	@desc call the provider, wait for the response and then parse the provider response into the route itinerary object
-	@param {route} route a Route object with at least two WayPoints completed
-	@return a Promise completed with a function that call the provider, wait the response and then will parse the response
-	in the route itinerary
-	@private
-
-	@--------------------------------------------------------------------------------------------------------------------------
-	*/
-
-	function myGetPromiseRoute ( route ) {
-		myRoute = route;
-		return new Promise ( myGetRoute );
-	}
-
-	/**
-	@--------------------------------------------------------------------------------------------------------------------------
-
-	@class MapboxRouteProvider
-	@classdesc This class implements the Provider interface for Mapbox. It's not possible to instanciate
-	this class because the class is not exported from the module. Only one instance is created and added to the list
-	of Providers of TravelNotes
-	@see Provider for a description of methods
-	@hideconstructor
-
-	@--------------------------------------------------------------------------------------------------------------------------
-	*/
-
-	return {
-
-		getPromiseRoute : route => myGetPromiseRoute ( route ),
-		get icon ( ) {
-			return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWX\
-					MAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AocEwcBrMn63AAAAk1JREFUSMftlj9oU1EUxn8neQ0thE6lgpO1TiptHhShJiIu2qHJA6\
-					FudtBRUBcpouJUnRyqgpODVcG62LROHfzHexGiJWkEQbCr0IqVYKPStDkOpuYRfW1eTNCh33Tvufec717udz8ObOFfITqV3XA9Nj\
-					n3W+xAMuO7pnhs7AQiwCqwpvBNVN47Vu8SQDSZwbFMqsexyUyHinQjtAEBwACyTiKyWM1heBzyMHDXdbplRCeiyexVCei8HTfpf5\
-					gCwLFM9k/lEF3bpSIXgWNAm6vWceBercQrVfMwcBKhvVRcOwEst2zbXlldXQljGFeAoRpqbUjshSExgo9iM6kHLw7uUIDYTEr0ez\
-					DuQeoJw7/8ZLRUCD/ZNz6/AFAqFDolWBr1WyVQh/C7JKgj6eFu0sPdSFBHgC6/RWq7sbCI0g60/gzoqWhy7v762LXzC/AR2NmQG6\
-					tyE3jnCoUQHUN0DAi54m+BGw27sUAGyAOjZYUD9Fdty4vqLRX51Mg3bnUSkevAm6rc9XwFXtuWeafyHI0hDgCI6AXg8x/WlwTO+6\
-					npS9V23HwKJMtW+ss+FCbsRORVU79TMdByFlhwhT60hELnmvqP+6dzpAf35BG9DBSBoqheej6w+2vsca55xC/jPei04sTN20AKsG\
-					3LHN87cg17sKe5ztXHbFnHclrgDEDHwFGa41wuzMb7iCbncKzeHEBsKsuzQ74dsy6vxrF6K0pPROrqdOoibgT+O+LQJvONUFOul7\
-					hmgCNlhzKArA/i+nK92tvN2t6/zd1C0/ADiOy3l0UZHxAAAAAASUVORK5CYII=';
-		},
-		get name ( ) { return 'Mapbox'; },
-
-		get transitModes ( ) { return { car : true, bike : true, pedestrian : true, train : false }; },
-		get providerKeyNeeded ( ) { return true; },
-
-		get providerKey ( ) { return myProviderKey.length; },
-		set providerKey ( ProviderKey ) { myProviderKey = ProviderKey; },
-
-		get userLanguage ( ) { return myUserLanguage; },
-		set userLanguage ( UserLanguage ) {
-			myUserLanguage = theOsrmTextInstructions.loadLanguage ( UserLanguage );
 		}
-	};
+	);
+
+	let wayPointsIterator = ourRoute.wayPoints.iterator;
+	response.waypoints.forEach (
+		function ( wayPoint ) {
+			if ( ! wayPointsIterator.done ) {
+				wayPointsIterator.value.latLng = [ wayPoint.location [ ONE ], wayPoint.location [ ZERO ] ];
+			}
+		}
+	);
+
+	onOk ( ourRoute );
 }
 
-window.TaN.addProvider ( ourNewMapboxRouteProvider ( ) );
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourGetUrl
+@desc gives the url to call
+@return {string} a string with the url, wayPoints, transitMode, user language and API key
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourGetUrl ( ) {
+	let wayPointsString = null;
+	ourRoute.wayPoints.forEach (
+		wayPoint => {
+			wayPointsString = wayPointsString ? wayPointsString + ';' : '';
+			wayPointsString +=
+				wayPoint.lng.toFixed ( LAT_LNG.fixed ) + ',' +
+				wayPoint.lat.toFixed ( LAT_LNG.fixed );
+		}
+	);
+
+	let profile = '';
+	switch ( ourRoute.itinerary.transitMode ) {
+	case 'car' :
+		profile = 'mapbox/driving/';
+		break;
+	case 'bike' :
+		profile = 'mapbox/cycling/';
+		break;
+	case 'pedestrian' :
+		profile = 'mapbox/walking/';
+		break;
+	default :
+		return;
+	}
+	return 'https://api.mapbox.com/directions/v5/' +
+		profile +
+		wayPointsString +
+		'?geometries=polyline6&amp;overview=full&amp;steps=true&amp;annotations=distance&amp;access_token=' +
+		ourProviderKey;
+}
+
+/*
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourGetRoute
+@desc call the provider, wait for the response and then parse the provider response
+@param {function} onOk a function to pass to the ourParseResponse
+@param {function} onError a function to pass to ourParseResponse or to call when an error occurs
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourGetRoute ( onOk, onError ) {
+	fetch ( ourGetUrl ( ) )
+		.then (
+			response => {
+				if ( HTTP_STATUS_OK === response.status &amp;&amp; response.ok ) {
+					response.json ( )
+						.then ( result => ourParseResponse ( result, onOk, onError ) );
+				}
+				else {
+					onError ( new Error ( 'Invalid status ' + response.status ) );
+				}
+			}
+		);
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@function ourGetPromiseRoute
+@desc call the provider, wait for the response and then parse the provider response into the route itinerary object
+@param {route} route a Route object with at least two WayPoints completed
+@return a Promise completed with a function that call the provider, wait the response and then will parse the response
+in the route itinerary
+@private
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+function ourGetPromiseRoute ( route ) {
+	ourRoute = route;
+	return new Promise ( ourGetRoute );
+}
+
+/**
+@------------------------------------------------------------------------------------------------------------------------------
+
+@class MapboxRouteProvider
+@classdesc This class implements the Provider interface for Mapbox. It's not possible to instanciate
+this class because the class is not exported from the module. Only one instance is created and added to the list
+of Providers of TravelNotes
+@see Provider for a description of methods
+@hideconstructor
+
+@------------------------------------------------------------------------------------------------------------------------------
+*/
+
+class MapboxRouteProvider {
+
+	constructor ( ) {
+		Object.freeze ( this );
+	}
+
+	getPromiseRoute ( route ) { return ourGetPromiseRoute ( route ); }
+
+	get icon ( ) {
+		return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWX\
+				MAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AocEwcBrMn63AAAAk1JREFUSMftlj9oU1EUxn8neQ0thE6lgpO1TiptHhShJiIu2qHJA6\
+				FudtBRUBcpouJUnRyqgpODVcG62LROHfzHexGiJWkEQbCr0IqVYKPStDkOpuYRfW1eTNCh33Tvufec717udz8ObOFfITqV3XA9Nj\
+				n3W+xAMuO7pnhs7AQiwCqwpvBNVN47Vu8SQDSZwbFMqsexyUyHinQjtAEBwACyTiKyWM1heBzyMHDXdbplRCeiyexVCei8HTfpf5\
+				gCwLFM9k/lEF3bpSIXgWNAm6vWceBercQrVfMwcBKhvVRcOwEst2zbXlldXQljGFeAoRpqbUjshSExgo9iM6kHLw7uUIDYTEr0ez\
+				DuQeoJw7/8ZLRUCD/ZNz6/AFAqFDolWBr1WyVQh/C7JKgj6eFu0sPdSFBHgC6/RWq7sbCI0g60/gzoqWhy7v762LXzC/AR2NmQG6\
+				tyE3jnCoUQHUN0DAi54m+BGw27sUAGyAOjZYUD9Fdty4vqLRX51Mg3bnUSkevAm6rc9XwFXtuWeafyHI0hDgCI6AXg8x/WlwTO+6\
+				npS9V23HwKJMtW+ss+FCbsRORVU79TMdByFlhwhT60hELnmvqP+6dzpAf35BG9DBSBoqheej6w+2vsca55xC/jPei04sTN20AKsG\
+				3LHN87cg17sKe5ztXHbFnHclrgDEDHwFGa41wuzMb7iCbncKzeHEBsKsuzQ74dsy6vxrF6K0pPROrqdOoibgT+O+LQJvONUFOul7\
+				hmgCNlhzKArA/i+nK92tvN2t6/zd1C0/ADiOy3l0UZHxAAAAAASUVORK5CYII=';
+	}
+
+	get name ( ) { return 'Mapbox'; }
+
+	get transitModes ( ) { return { car : true, bike : true, pedestrian : true, train : false }; }
+	get providerKeyNeeded ( ) { return true; }
+
+	get providerKey ( ) { return ourProviderKey.length; }
+	set providerKey ( ProviderKey ) { ourProviderKey = ProviderKey; }
+
+	get userLanguage ( ) { return ourUserLanguage; }
+	set userLanguage ( UserLanguage ) {
+		ourUserLanguage = theOsrmTextInstructions.loadLanguage ( UserLanguage );
+	}
+}
+
+window.TaN.addProvider ( new MapboxRouteProvider ( ) );
 
 /*
 --- End of MapboxRouteProvider.js file ----------------------------------------------------------------------------------------
@@ -351,13 +344,13 @@ window.TaN.addProvider ( ourNewMapboxRouteProvider ( ) );
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-GraphHopperRouteProvider-GraphHopperRouteProvider.html">GraphHopperRouteProvider</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapboxRouteProvider-MapboxRouteProvider.html">MapboxRouteProvider</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MapzenValhallaRouteProvider-MapzenValhallaRouteProvider.html">MapzenValhallaRouteProvider</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OpenRouteServiceRouteProvider-OpenRouteServiceRouteProvider.html">OpenRouteServiceRouteProvider</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-OsrmRouteProvider-OsrmRouteProvider.html">OsrmRouteProvider</a></li><li><a href="module-OsrmTextInstructions-OsrmTextInstructions.html">OsrmTextInstructions</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PolylineRouteProvider-PolylineRouteProvider.html">PolylineRouteProvider</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-PublicTransportRouteProvider-PublicTransportRouteProvider.html">PublicTransportRouteProvider</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SphericalTrigonometry-SphericalTrigonometry.html">SphericalTrigonometry</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-WhatsNew.html">WhatsNew</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-QuoiDeNeuf.html">QuoiDeNeuf</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#theOsrmTextInstructions">theOsrmTextInstructions</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#thePolylineEncoder">thePolylineEncoder</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theSphericalTrigonometry">theSphericalTrigonometry</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-GraphHopperRouteProvider-GraphHopperRouteProvider.html">GraphHopperRouteProvider</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapboxRouteProvider-MapboxRouteProvider.html">MapboxRouteProvider</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MapzenValhallaRouteProvider-MapzenValhallaRouteProvider.html">MapzenValhallaRouteProvider</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OpenRouteServiceRouteProvider-OpenRouteServiceRouteProvider.html">OpenRouteServiceRouteProvider</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-OsrmRouteProvider-OsrmRouteProvider.html">OsrmRouteProvider</a></li><li><a href="module-OsrmTextInstructions-OsrmTextInstructions.html">OsrmTextInstructions</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PolylineRouteProvider-PolylineRouteProvider.html">PolylineRouteProvider</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-PublicTransportRouteProvider-PublicTransportRouteProvider.html">PublicTransportRouteProvider</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SaveAsDialog-SaveAsDialog.html">SaveAsDialog</a></li><li><a href="module-SphericalTrigonometry-SphericalTrigonometry.html">SphericalTrigonometry</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-WhatsNew.html">WhatsNew</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-QuoiDeNeuf.html">QuoiDeNeuf</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSaveAsDialog">newSaveAsDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#theOsrmTextInstructions">theOsrmTextInstructions</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#thePolylineEncoder">thePolylineEncoder</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theSphericalTrigonometry">theSphericalTrigonometry</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <!--footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Jan 22 2021 11:40:00 GMT+0100 (GMT+01:00)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Feb 19 2021 20:15:37 GMT+0100 (GMT+01:00)
 </footer-->
 <script> prettyPrint(); </script>
 <script src="scripts/linenumber.js"> </script>

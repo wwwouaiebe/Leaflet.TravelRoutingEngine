@@ -2,3 +2,4 @@ node_modules/
 dist/
 gh-page/
 debug/
+tests/

@@ -97,11 +97,26 @@ import { theConfig } from '../data/Config.js';
 import { theDataSearchEngine } from '../data/DataSearchEngine.js';
 import { theGeometry } from '../util/Geometry.js';
 import { theSphericalTrigonometry } from '../util/SphericalTrigonometry.js';
-import { theHttpRequestBuilder } from '../util/HttpRequestBuilder.js';
 import { theTranslator } from '../UI/Translator.js';
-import { SVG_NS, ICON_DIMENSIONS, LAT_LNG, DISTANCE, ZERO, ONE, TWO, NOT_FOUND } from '../util/Constants.js';
+import {
+	SVG_NS, ICON_DIMENSIONS, LAT_LNG, DISTANCE, ZERO, ONE, TWO, NOT_FOUND, HTTP_STATUS_OK, DEGREES, OSM_COUNTRY_ADMIN_LEVEL
+}
+	from '../util/Constants.js';
 
 let ourRequestStarted = false;
+const OUR_QUERY_DISTANCE = Math.max (
+	theConfig.geoCoder.distances.hamlet,
+	theConfig.geoCoder.distances.village,
+	theConfig.geoCoder.distances.city,
+	theConfig.geoCoder.distances.town
+);
+const OUR_ICON_POSITION = Object.freeze ( {
+	atStart : -ONE,
+	onRoute : ZERO,
+	atEnd : ONE
+} );
+
+const OUR_SEARCH_AROUND_FACTOR = 1.5;
 
 /**
 @------------------------------------------------------------------------------------------------------------------------------
@@ -117,16 +132,7 @@ let ourRequestStarted = false;
 /* eslint-disable-next-line max-statements */
 function ourNewSvgIconFromOsmFactory ( ) {
 
-	const DEGREE_0 = 0;
-	const DEGREE_90 = 90;
-	const DEGREE_180 = 180;
-	const DEGREE_270 = 270;
-	const DEGREE_360 = 360;
-
-	const AT_START = -1;
-	const ON_ROUTE = 0;
-	const AT_END = 1;
-
+	let myOsmCityAdminLevel = theConfig.geoCoder.osmCityAdminLevel.DEFAULT;
 	let mySvgLatLngDistance = Object.seal (
 		{
 			latLng : [ LAT_LNG.defaultValue, LAT_LNG.defaultValue ],
@@ -134,20 +140,20 @@ function ourNewSvgIconFromOsmFactory ( ) {
 		}
 	);
 	let myNearestItineraryPoint = null;
-	let myRoute = null; // the TravelNotes route object
-	let myResponse = {}; // the xmlHttpRequest response parsed
+	let myRoute = null;
 	let myWaysMap = new Map ( );
 	let myNodesMap = new Map ( );
-	let myPlaces = [];
+	let myAdminNames = [];
+	let myPlaces = {};
 	let myPlace = null;
-	let myCity = '';
-	let mySvg = null; // the svg element
-	let myPositionOnRoute = ON_ROUTE;
+	let myCity = null;
+	let mySvg = null;
+	let myPositionOnRoute = OUR_ICON_POSITION.onRoute;
 	let myTranslation = [ ZERO, ZERO ];
 	let myRotation = ZERO;
 	let myDirection = null;
-	let mySvgZoom = theConfig.note.svgZoom;
-	let mySvgAngleDistance = theConfig.note.svgAngleDistance;
+	let mySvgZoom = theConfig.note.svgIcon.zoom;
+	let mySvgAngleDistance = theConfig.note.svgIcon.angleDistance;
 	let myDirectionArrow = ' ';
 	let myTooltip = '';
 	let myStreets = '';
@@ -156,47 +162,123 @@ function ourNewSvgIconFromOsmFactory ( ) {
 	/**
 	@--------------------------------------------------------------------------------------------------------------------------
 
-	@function myCreateNodesAndWaysMaps
-	@desc This function create the way and node JS maps from the XmlHttpRequest response and extract city and places
+	@function mySetHamletAndCity
+	@desc this function search the city and hamlet
 	@private
 
 	@--------------------------------------------------------------------------------------------------------------------------
 	*/
 
-	function myCreateNodesAndWaysMaps ( ) {
+	function mySetHamletAndCity ( ) {
+		myCity = null;
+		let adminHamlet = null;
+
+		for ( let namesCounter = TWO; namesCounter &lt; myAdminNames.length; namesCounter ++ ) {
+			if ( 'undefined' !== typeof ( myAdminNames [ namesCounter ] ) ) {
+				if ( myOsmCityAdminLevel >= namesCounter ) {
+					myCity = myAdminNames [ namesCounter ];
+				}
+				else {
+					adminHamlet = myAdminNames [ namesCounter ];
+				}
+			}
+		}
+		myPlace = null;
+		let placeDistance = Number.MAX_VALUE;
+
+		Object.values ( myPlaces ).forEach (
+			place => {
+				if ( place.distance &lt; placeDistance ) {
+					placeDistance = place.distance;
+					myPlace = place.name;
+				}
+			}
+		);
+
+		myPlace = adminHamlet || myPlace;
+		if ( myPlace === myCity ) {
+			myPlace = null;
+		}
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myCreateNodesAndWaysMaps
+	@desc This function create the way and node JS maps from the overpassAPI response and extract city and myPlaces
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myCreateNodesAndWaysMaps ( overpassAPIdata ) {
 		myWaysMap.clear ( );
 		myNodesMap.clear ( );
-
-		// Elements are pushed in 2 maps: 1 for nodes and 1 for ways
-		myResponse.elements.forEach (
+		myAdminNames = [];
+		myPlaces = {
+			hamlet : {
+				name : null,
+				distance : Number.MAX_VALUE,
+				maxDistance : theConfig.geoCoder.distances.hamlet
+			},
+			village : {
+				name : null,
+				distance : Number.MAX_VALUE,
+				maxDistance : theConfig.geoCoder.distances.village
+			},
+			city : {
+				name : null,
+				distance : Number.MAX_VALUE,
+				maxDistance : theConfig.geoCoder.distances.city
+			},
+			town : {
+				name : null,
+				distance : Number.MAX_VALUE,
+				maxDistance : theConfig.geoCoder.distances.town
+			}
+		};
+		overpassAPIdata.elements.forEach (
 			element => {
 				switch ( element.type ) {
 				case 'area' :
-
-					// the only area in the response is the city
-					if ( element.tags &amp;&amp; element.tags.boundary &amp;&amp; element.tags.name ) {
-						myCity = element.tags.name;
+					{
+						let elementName = element.tags.name;
+						if (
+							theConfig.nominatim.language &amp;&amp;
+							'*' !== theConfig.nominatim.language &amp;&amp;
+							element.tags [ 'name:' + theConfig.nominatim.language ]
+						) {
+							elementName = element.tags [ 'name:' + theConfig.nominatim.language ];
+						}
+						myAdminNames [ Number.parseInt ( element.tags.admin_level ) ] = elementName;
+						if ( OSM_COUNTRY_ADMIN_LEVEL === element.tags.admin_level ) {
+							myOsmCityAdminLevel =
+								theConfig.geoCoder.osmCityAdminLevel [ element.tags [ 'ISO3166-1' ] ] || myOsmCityAdminLevel;
+						}
 					}
 					break;
 				case 'way' :
-
-					// replacing the nodes property with the nodesId property to
-					// avoid confusion between nodes and nodesId. The element.nodes contains nodesIds!!
 					element.nodesIds = element.nodes;
 					delete element.nodes;
 					myWaysMap.set ( element.id, element );
 					break;
 				case 'node' :
-
 					myNodesMap.set ( element.id, element );
 					if (
-						element.tags &amp;&amp; element.tags.place
-						&amp;&amp;
-						[ 'town', 'city', 'village', 'hamlet' ].includes ( element.tags.place )
+						element.tags &amp;&amp;
+						element.tags.place &amp;&amp;
+						myPlaces [ element.tags.place ] &amp;&amp;
+						element.tags.name
 					) {
-
-						// a place is found in the response
-						myPlaces.push ( element );
+						let nodeDistance = theSphericalTrigonometry.pointsDistance (
+							mySvgLatLngDistance.latLng,
+							[ element.lat, element.lon ]
+						);
+						let place = myPlaces [ element.tags.place ];
+						if ( place.maxDistance > nodeDistance &amp;&amp; place.distance > nodeDistance ) {
+							place.distance = nodeDistance;
+							place.name = element.tags.name;
+						}
 					}
 					break;
 				default :
@@ -244,30 +326,6 @@ function ourNewSvgIconFromOsmFactory ( ) {
 	/**
 	@--------------------------------------------------------------------------------------------------------------------------
 
-	@function mySearchHamlet
-	@desc this function search the nearest place from the nearest itinerary point
-	@private
-
-	@--------------------------------------------------------------------------------------------------------------------------
-	*/
-
-	function mySearchHamlet ( ) {
-		let minDistance = Number.MAX_VALUE;
-		myPlaces.forEach (
-			place => {
-				let placeDistance =
-					theSphericalTrigonometry.pointsDistance ( myNearestItineraryPoint.latLng, [ place.lat, place.lon ] );
-				if ( minDistance > placeDistance ) {
-					minDistance = placeDistance;
-					myPlace = place.tags.name;
-				}
-			}
-		);
-	}
-
-	/**
-	@--------------------------------------------------------------------------------------------------------------------------
-
 	@function myLatLngCompare
 	@desc this function compare the lat and lng of the parameter with the lat and lng of the route waypoints
 	@param {ItineraryPoint} itineraryPoint the itineraryPoint to test
@@ -280,7 +338,7 @@ function ourNewSvgIconFromOsmFactory ( ) {
 
 	function myLatLngCompare ( itineraryPoint ) {
 
-		const COMPARE_PRECISION = 0.00001;
+		const COMPARE_PRECISION = 0.000005;
 
 		let isWayPoint = false;
 		myRoute.wayPoints.forEach (
@@ -350,7 +408,7 @@ function ourNewSvgIconFromOsmFactory ( ) {
 		// searching in the nodes JS map the incoming, outgoing and icon nodes
 		myNodesMap.forEach (
 			node => {
-				if ( node.tags &amp;&amp; node.tags.rcn_ref &amp;&amp; 'bike' === myRoute.itinerary.transitMode ) {
+				if ( 'bike' === myRoute.itinerary.transitMode &amp;&amp; node.tags &amp;&amp; node.tags.rcn_ref ) {
 					rcnRefNode = node;
 				}
 				if ( myNearestItineraryPoint ) {
@@ -387,7 +445,7 @@ function ourNewSvgIconFromOsmFactory ( ) {
 				[ rcnRefNode.lat, rcnRefNode.lon ],
 				[ iconNode.lat, iconNode.lon ]
 			);
-			if ( theConfig.note.svgRcnRefDistance > rcnRefDistance ) {
+			if ( theConfig.note.svgIcon.rcnRefDistance > rcnRefDistance ) {
 				iconNode = rcnRefNode;
 			}
 		}
@@ -397,11 +455,11 @@ function ourNewSvgIconFromOsmFactory ( ) {
 			( iconNode &amp;&amp; iconNode.tags &amp;&amp; iconNode.tags.highway &amp;&amp; 'mini_roundabout' === iconNode.tags.highway );
 
 		if (
+			'bike' === myRoute.itinerary.transitMode
+			&amp;&amp;
 			iconNode &amp;&amp; iconNode.tags &amp;&amp; iconNode.tags.rcn_ref
 			&amp;&amp;
 			iconNode.tags [ 'network:type' ] &amp;&amp; 'node_network' === iconNode.tags [ 'network:type' ]
-			&amp;&amp;
-			'bike' === myRoute.itinerary.transitMode
 		) {
 			myRcnRef = iconNode.tags.rcn_ref;
 			myTooltip += theTranslator.getText ( 'SvgIconFromOsmFactory - rcnRef', { rcnRef : myRcnRef } );
@@ -471,12 +529,12 @@ function ourNewSvgIconFromOsmFactory ( ) {
 			}
 		);
 
-		if ( AT_START === myPositionOnRoute ) {
+		if ( OUR_ICON_POSITION.atStart === myPositionOnRoute ) {
 
 			// It's the start point adding a green circle to the outgoing street
 			myStreets = '🟢 ' + outgoingStreet;
 		}
-		else if ( AT_END === myPositionOnRoute ) {
+		else if ( OUR_ICON_POSITION.atEnd === myPositionOnRoute ) {
 
 			// It's the end point adding a red circle to the incoming street
 			myStreets = incomingStreet + ' 🔴 ';
@@ -574,15 +632,15 @@ function ourNewSvgIconFromOsmFactory ( ) {
 					( rotationPoint [ ZERO ] - iconPoint [ ZERO ] )
 				)
 				*
-				DEGREE_180 / Math.PI;
+				DEGREES.d180 / Math.PI;
 			if ( ZERO > myRotation ) {
-				myRotation += DEGREE_360;
+				myRotation += DEGREES.d360;
 			}
-			myRotation -= DEGREE_270;
+			myRotation -= DEGREES.d270;
 
 			// point 0,0 of the svg is the UPPER left corner
 			if ( ZERO > rotationPoint [ ZERO ] - iconPoint [ ZERO ] ) {
-				myRotation += DEGREE_180;
+				myRotation += DEGREES.d180;
 			}
 		}
 
@@ -599,26 +657,26 @@ function ourNewSvgIconFromOsmFactory ( ) {
 				( directionPoint [ ZERO ] - iconPoint [ ZERO ] )
 			)
 				*
-				DEGREE_180 / Math.PI;
+				DEGREES.d180 / Math.PI;
 
 			// point 0,0 of the svg is the UPPER left corner
 			if ( ZERO > directionPoint [ ZERO ] - iconPoint [ ZERO ] ) {
-				myDirection += DEGREE_180;
+				myDirection += DEGREES.d180;
 			}
 			myDirection -= myRotation;
 
 			// setting direction between 0 and 360
-			while ( DEGREE_0 > myDirection ) {
-				myDirection += DEGREE_360;
+			while ( DEGREES.d0 > myDirection ) {
+				myDirection += DEGREES.d360;
 			}
-			while ( DEGREE_360 &lt; myDirection ) {
-				myDirection -= DEGREE_360;
+			while ( DEGREES.d360 &lt; myDirection ) {
+				myDirection -= DEGREES.d360;
 			}
 		}
 		if ( myNearestItineraryPoint.objId === myRoute.itinerary.itineraryPoints.first.objId ) {
-			myRotation = -myDirection - DEGREE_90;
+			myRotation = -myDirection - DEGREES.d90;
 			myDirection = null;
-			myPositionOnRoute = AT_START;
+			myPositionOnRoute = OUR_ICON_POSITION.atStart;
 		}
 
 		if (
@@ -629,7 +687,7 @@ function ourNewSvgIconFromOsmFactory ( ) {
 
 			// using lat &amp; lng because last point is sometime duplicated
 			myDirection = null;
-			myPositionOnRoute = AT_END;
+			myPositionOnRoute = OUR_ICON_POSITION.atEnd;
 		}
 	}
 
@@ -646,31 +704,31 @@ function ourNewSvgIconFromOsmFactory ( ) {
 	function mySetDirectionArrowAndTooltip ( ) {
 
 		if ( null !== myDirection ) {
-			if ( myDirection &lt; theConfig.note.svgAnleMaxDirection.right ) {
+			if ( myDirection &lt; theConfig.note.svgIcon.angleDirection.right ) {
 				myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Turn right' );
 				myDirectionArrow = '🢂';
 			}
-			else if ( myDirection &lt; theConfig.note.svgAnleMaxDirection.slightRight ) {
+			else if ( myDirection &lt; theConfig.note.svgIcon.angleDirection.slightRight ) {
 				myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Turn slight right' );
 				myDirectionArrow = '🢅';
 			}
-			else if ( myDirection &lt; theConfig.note.svgAnleMaxDirection.continue ) {
+			else if ( myDirection &lt; theConfig.note.svgIcon.angleDirection.continue ) {
 				myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Continue' );
 				myDirectionArrow = '🢁';
 			}
-			else if ( myDirection &lt; theConfig.note.svgAnleMaxDirection.slightLeft ) {
+			else if ( myDirection &lt; theConfig.note.svgIcon.angleDirection.slightLeft ) {
 				myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Turn slight left' );
 				myDirectionArrow = '🢄';
 			}
-			else if ( myDirection &lt; theConfig.note.svgAnleMaxDirection.left ) {
+			else if ( myDirection &lt; theConfig.note.svgIcon.angleDirection.left ) {
 				myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Turn left' );
 				myDirectionArrow = '🢀';
 			}
-			else if ( myDirection &lt; theConfig.note.svgAnleMaxDirection.sharpLeft ) {
+			else if ( myDirection &lt; theConfig.note.svgIcon.angleDirection.sharpLeft ) {
 				myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Turn sharp left' );
 				myDirectionArrow = '🢇';
 			}
-			else if ( myDirection &lt; theConfig.note.svgAnleMaxDirection.sharpRight ) {
+			else if ( myDirection &lt; theConfig.note.svgIcon.angleDirection.sharpRight ) {
 				myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Turn sharp right' );
 				myDirectionArrow = '🢆';
 			}
@@ -680,10 +738,10 @@ function ourNewSvgIconFromOsmFactory ( ) {
 			}
 		}
 
-		if ( AT_START === myPositionOnRoute ) {
+		if ( OUR_ICON_POSITION.atStart === myPositionOnRoute ) {
 			myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Start' );
 		}
-		else if ( AT_END === myPositionOnRoute ) {
+		else if ( OUR_ICON_POSITION.atEnd === myPositionOnRoute ) {
 			myTooltip = theTranslator.getText ( 'SvgIconFromOsmFactory - Stop' );
 		}
 	}
@@ -896,45 +954,11 @@ function ourNewSvgIconFromOsmFactory ( ) {
 
 		https://lz4.overpass-api.de/api/interpreter?
 		data=
-			[out:json][timeout:40];																=> format, timeout
-
-			way[highway](around:300,50.489312,5.501035)->.a;(.a >;.a;)->.a;.a out;				=> Searching streets
-
-			is_in(50.489312,5.501035)->.e;														=> Searching city limit
-			area.e[admin_level="2"][name="United Kingdom"]->.f;
-			area.e[admin_level="8"]->.g;
-			area.e[admin_level="10"]->.h;
-			if(f.count(deriveds)==0){
-				.g->.i;																			Normally admin_level = 8
-			}
-			else{																				but in the UK nothing is as
-				if(h.count(deriveds)==0){														in the others countries...
-					.g->.i;																		So we have to search first
-				}																				with admin_level = 10
-				else{																			and if nothing found,
-					.h->.i;																		search with admin_level = 8
-				}
-			}
-			.i out;
-
-			(
-				node(area.i)[place="village"];													=> Searching places in the
-				node(area.i)[place="hamlet"];													city area
-				node(area.i)[place="city"];
-				node(area.i)[place="town"];
-			)->.k;
-
-			( 																					=> Searching places near the
-				node(around:200,50.489312,5.501035)[place="hamlet"];							icon point
-				node(around:400,50.489312,5.501035)[place="village"];
-				node(around:1200,50.489312,5.501035)[place="city"];
-				node(around:1500,50.489312,5.501035)[place="town"];
-			)->.l;
-			node.k.l->.m;
-			.m out;
+			[out:json][timeout:40];
+			way[highway](around:300,50.489312,5.501035)->.a;(.a >;.a;)->.a;.a out;
+			is_in(50.644242,5.572354)->.e;area.e[admin_level][boundary="administrative"];out;
+			node(around:1500,50.644242,5.572354)[place];out;
 		*/
-
-		const SEARCH_AROUND_FACTOR = 1.5;
 
 		let requestLatLng =
 			mySvgLatLngDistance.latLng [ ZERO ].toFixed ( LAT_LNG.fixed ) +
@@ -942,49 +966,54 @@ function ourNewSvgIconFromOsmFactory ( ) {
 			mySvgLatLngDistance.latLng [ ONE ].toFixed ( LAT_LNG.fixed );
 
 		let requestUrl = theConfig.overpassApi.url +
-			'?data=[out:json][timeout:' +
-			theConfig.note.svgTimeOut + '];' +
+			'?data=[out:json][timeout:' + theConfig.overpassApi.timeOut + '];' +
 			'way[highway](around:' +
-			( ICON_DIMENSIONS.svgViewboxDim * SEARCH_AROUND_FACTOR ).toFixed ( ZERO ) +
-			',' +
-			requestLatLng +
-			')->.a;(.a >;.a;)->.a;.a out;' +
-			'is_in(' +
-			requestLatLng +
-			')->.e;' +
-			'area.e[admin_level="2"][name="United Kingdom"]->.f;' +
-			'area.e[admin_level="8"]->.g;' +
-			'area.e[admin_level="10"]->.h;' +
-			'if(f.count(deriveds)==0){.g->.i;}else{if(h.count(deriveds)==0){.g->.i;}else{.h->.i;}}.i out;' +
-			'(node(area.i)[place="village"];' +
-			'node(area.i)[place="hamlet"];' +
-			'node(area.i)[place="city"];' +
-			'node(area.i)[place="town"];)->.k;' +
-			'( ' +
-			'node(around:' +
-			theConfig.note.svgHamletDistance +
-			',' +
-			requestLatLng +
-			')[place="hamlet"];' +
-			'node(around:' +
-			theConfig.note.svgVillageDistance +
-			',' +
-			requestLatLng +
-			')[place="village"];' +
-			'node(around:' +
-			theConfig.note.svgCityDistance +
-			',' +
-			requestLatLng +
-			')[place="city"];' +
-			'node(around:' +
-			theConfig.note.svgTownDistance +
-			',' +
-			requestLatLng +
-			')[place="town"];' +
-			')->.l;' +
-			'node.k.l->.m;' +
-			'.m out;';
+			( ICON_DIMENSIONS.svgViewboxDim * OUR_SEARCH_AROUND_FACTOR ).toFixed ( ZERO ) +
+			',' + requestLatLng + ')->.a;(.a >;.a;)->.a;.a out;' +
+			'is_in(' + requestLatLng + ')->.e;area.e[admin_level][boundary="administrative"];out;' +
+			'node(around:' + OUR_QUERY_DISTANCE + ',' + requestLatLng + ')[place];out;';
+
 		return requestUrl;
+	}
+
+	/**
+	@--------------------------------------------------------------------------------------------------------------------------
+
+	@function myBuildIconAndAdress
+	@desc Search and build all the needed data
+	@param {function} onOk The success handler passed to the Promise
+	@param {function} onError The error handler passed to the Promise
+	@private
+
+	@--------------------------------------------------------------------------------------------------------------------------
+	*/
+
+	function myBuildIconAndAdress ( overpassAPIdata, onOk /* , onError */ ) {
+		myCreateNodesAndWaysMaps ( overpassAPIdata );
+		myCreateSvg ( );
+		mySetHamletAndCity ( );
+		myComputeTranslation ( );
+		myComputeRotationAndDirection ( );
+		mySetDirectionArrowAndTooltip ( );
+		mySearchPassingStreets ( );
+		myCreateRoute ( );
+		myCreateWays ( );
+		myCreateRcnRef ( );
+
+		ourRequestStarted = false;
+
+		onOk (
+			Object.freeze (
+				{
+					svg : mySvg,
+					tooltip : myTooltip,
+					city : myCity,
+					place : myPlace,
+					streets : myStreets,
+					latLng : myNearestItineraryPoint.latLng
+				}
+			)
+		);
 	}
 
 	/**
@@ -1001,36 +1030,6 @@ function ourNewSvgIconFromOsmFactory ( ) {
 
 	function myGetIconAndAdress ( onOk, onError ) {
 
-		function BuildIconAndAdress ( response ) {
-			myResponse = response;
-
-			myCreateNodesAndWaysMaps ( );
-			myCreateSvg ( );
-			mySearchHamlet ( );
-			myComputeTranslation ( );
-			myComputeRotationAndDirection ( );
-			mySetDirectionArrowAndTooltip ( );
-			mySearchPassingStreets ( );
-			myCreateRoute ( );
-			myCreateWays ( );
-			myCreateRcnRef ( );
-
-			ourRequestStarted = false;
-
-			onOk (
-				Object.freeze (
-					{
-						svg : mySvg,
-						tooltip : myTooltip,
-						city : myCity,
-						place : myPlace,
-						streets : myStreets,
-						latLng : myNearestItineraryPoint.latLng
-					}
-				)
-			);
-		}
-
 		if ( ourRequestStarted ) {
 			onError ( 'A request is already running' );
 			return;
@@ -1038,21 +1037,32 @@ function ourNewSvgIconFromOsmFactory ( ) {
 
 		ourRequestStarted = true;
 
-		myResponse = {};
 		mySvg = null;
-		myCity = '';
+		myCity = null;
+		myPlace = null;
 		myDirectionArrow = ' ';
 		myTooltip = '';
 		myStreets = '';
 
 		mySearchNearestItineraryPoint ( );
 
-		theHttpRequestBuilder.getJsonPromise ( myGetUrl ( ) )
-			.then ( BuildIconAndAdress )
-			.catch (
-				err => {
-					ourRequestStarted = false;
-					onError ( err );
+		fetch ( myGetUrl ( ) )
+			.then (
+				response => {
+					if ( HTTP_STATUS_OK === response.status &amp;&amp; response.ok ) {
+						response.json ( )
+							. then ( overpassAPIdata => myBuildIconAndAdress ( overpassAPIdata, onOk, onError ) )
+							.catch (
+								err => {
+									ourRequestStarted = false;
+									onError ( err );
+								}
+							);
+					}
+					else {
+						ourRequestStarted = false;
+						onError ( new Error ( 'An error occurs when callin OverpassAPI' ) );
+					}
 				}
 			);
 	}
@@ -1070,6 +1080,10 @@ function ourNewSvgIconFromOsmFactory ( ) {
 
 	class SvgIconFromOsmFactory {
 
+		constructor ( ) {
+			Object.freeze ( this );
+		}
+
 		/**
 		this function returns a Promise for the svg icon creation
 		@param {array.&lt;number>} iconLatLng The lat and lng where the icon must be createDocumentFragment
@@ -1085,7 +1099,7 @@ function ourNewSvgIconFromOsmFactory ( ) {
 		}
 	}
 
-	return Object.seal ( new SvgIconFromOsmFactory );
+	return new SvgIconFromOsmFactory ( );
 }
 
 /**
@@ -1115,13 +1129,13 @@ export {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-GraphHopperRouteProvider-GraphHopperRouteProvider.html">GraphHopperRouteProvider</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-HttpRequestBuilder-HttpRequestBuilder.html">HttpRequestBuilder</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-MainViewer-MainViewer.html">MainViewer</a></li><li><a href="module-Main-Main.html">Main</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapboxRouteProvider-MapboxRouteProvider.html">MapboxRouteProvider</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MapzenValhallaRouteProvider-MapzenValhallaRouteProvider.html">MapzenValhallaRouteProvider</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OpenRouteServiceRouteProvider-OpenRouteServiceRouteProvider.html">OpenRouteServiceRouteProvider</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-OsrmRouteProvider-OsrmRouteProvider.html">OsrmRouteProvider</a></li><li><a href="module-OsrmTextInstructions-OsrmTextInstructions.html">OsrmTextInstructions</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PolylineRouteProvider-PolylineRouteProvider.html">PolylineRouteProvider</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-PublicTransportRouteProvider-PublicTransportRouteProvider.html">PublicTransportRouteProvider</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SphericalTrigonometry-SphericalTrigonometry.html">SphericalTrigonometry</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-WhatsNew.html">WhatsNew</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-QuoiDeNeuf.html">QuoiDeNeuf</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theHttpRequestBuilder">theHttpRequestBuilder</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#theOsrmTextInstructions">theOsrmTextInstructions</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#thePolylineEncoder">thePolylineEncoder</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theSphericalTrigonometry">theSphericalTrigonometry</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="module-AboutDialog-AboutDialog.html">AboutDialog</a></li><li><a href="module-APIKeysDialog-APIKeysDialog.html">APIKeysDialog</a></li><li><a href="module-APIKeysManager-APIKeysManager.html">APIKeysManager</a></li><li><a href="module-AttributionsUI-AttributionsUI.html">AttributionsUI</a></li><li><a href="module-BaseContextMenu-BaseContextMenu.html">BaseContextMenu</a></li><li><a href="module-BaseDialog-BaseDialog.html">BaseDialog</a></li><li><a href="module-Collection-Collection.html">Collection</a></li><li><a href="module-ColorDialog-Color.html">Color</a></li><li><a href="module-ColorDialog-ColorDialog.html">ColorDialog</a></li><li><a href="module-Config-Config.html">Config</a></li><li><a href="module-DataEncryptor-DataEncryptor.html">DataEncryptor</a></li><li><a href="module-DataSearchEngine-DataSearchEngine.html">DataSearchEngine</a></li><li><a href="module-ErrorsUI-ErrorsUI.html">ErrorsUI</a></li><li><a href="module-EventDispatcher-EventDispatcher.html">EventDispatcher</a></li><li><a href="module-FileCompactor-FileCompactor.html">FileCompactor</a></li><li><a href="module-FileLoader-FileLoader.html">FileLoader</a></li><li><a href="module-FloatWindow-FloatWindow.html">FloatWindow</a></li><li><a href="module-GeoCoder-GeoCoder.html">GeoCoder</a></li><li><a href="module-GeoLocator-GeoLocator.html">GeoLocator</a></li><li><a href="module-Geometry-Geometry.html">Geometry</a></li><li><a href="module-GpxFactory-GpxFactory.html">GpxFactory</a></li><li><a href="module-GraphHopperRouteProvider-GraphHopperRouteProvider.html">GraphHopperRouteProvider</a></li><li><a href="module-HTMLElementsFactory-HTMLElementsFactory.html">HTMLElementsFactory</a></li><li><a href="module-HTMLSanitizer-HTMLSanitizer.html">HTMLSanitizer</a></li><li><a href="module-HTMLSanitizer-ourValidityMap.html">ourValidityMap</a></li><li><a href="module-HTMLViewsFactory-HTMLViewsFactory.html">HTMLViewsFactory</a></li><li><a href="module-IndexedDb-IndexedDb.html">IndexedDb</a></li><li><a href="module-ItineraryPaneUI-ItineraryPaneUI.html">ItineraryPaneUI</a></li><li><a href="module-ItineraryPoint-ItineraryPoint.html">ItineraryPoint</a></li><li><a href="module-Itinerary-Itinerary.html">Itinerary</a></li><li><a href="module-LayersToolbarUI-LayersToolbarUI.html">LayersToolbarUI</a></li><li><a href="module-Layer-Layer.html">Layer</a></li><li><a href="module-ManeuverContextMenu-ManeuverContextMenu.html">ManeuverContextMenu</a></li><li><a href="module-Maneuver-Maneuver.html">Maneuver</a></li><li><a href="module-MapboxRouteProvider-MapboxRouteProvider.html">MapboxRouteProvider</a></li><li><a href="module-MapContextMenu-MapContextMenu.html">MapContextMenu</a></li><li><a href="module-MapEditor-MapEditor.html">MapEditor</a></li><li><a href="module-MapzenValhallaRouteProvider-MapzenValhallaRouteProvider.html">MapzenValhallaRouteProvider</a></li><li><a href="module-MouseUI-MouseUI.html">MouseUI</a></li><li><a href="module-NoteContextMenu-NoteContextMenu.html">NoteContextMenu</a></li><li><a href="module-NoteDialogToolbar-NoteDialogToolbar.html">NoteDialogToolbar</a></li><li><a href="module-NoteDialog-NoteDialog.html">NoteDialog</a></li><li><a href="module-NoteEditor-NoteEditor.html">NoteEditor</a></li><li><a href="module-Note-Note.html">Note</a></li><li><a href="module-ObjType-ObjType.html">ObjType</a></li><li><a href="module-OpenRouteServiceRouteProvider-OpenRouteServiceRouteProvider.html">OpenRouteServiceRouteProvider</a></li><li><a href="module-OsmSearchContextMenu-OsmSearchContextMenu.html">OsmSearchContextMenu</a></li><li><a href="module-OsmSearchEngine-DictionaryItem.html">DictionaryItem</a></li><li><a href="module-OsmSearchEngine-OsmSearchEngine.html">OsmSearchEngine</a></li><li><a href="module-OsmSearchPaneUI-OsmSearchPaneUI.html">OsmSearchPaneUI</a></li><li><a href="module-OsrmRouteProvider-OsrmRouteProvider.html">OsrmRouteProvider</a></li><li><a href="module-OsrmTextInstructions-OsrmTextInstructions.html">OsrmTextInstructions</a></li><li><a href="module-PanesManagerUI-PanesManagerUI.html">PanesManagerUI</a></li><li><a href="module-PasswordDialog-PasswordDialog.html">PasswordDialog</a></li><li><a href="module-PolylineRouteProvider-PolylineRouteProvider.html">PolylineRouteProvider</a></li><li><a href="module-PrintFactory-PrintFactory.html">PrintFactory</a></li><li><a href="module-PrintRouteMapDialog-PrintRouteMapDialog.html">PrintRouteMapDialog</a></li><li><a href="module-ProfileContextMenu-ProfileContextMenu.html">ProfileContextMenu</a></li><li><a href="module-ProfileFactory-ProfileFactory.html">ProfileFactory</a></li><li><a href="module-ProfileWindowsManager-ProfileWindowsManager.html">ProfileWindowsManager</a></li><li><a href="module-ProfileWindow-ProfileWindow.html">ProfileWindow</a></li><li><a href="module-ProvidersToolbarUI-ProvidersToolbarUI.html">ProvidersToolbarUI</a></li><li><a href="module-PublicTransportRouteProvider-PublicTransportRouteProvider.html">PublicTransportRouteProvider</a></li><li><a href="module-RouteContextMenu-RouteContextMenu.html">RouteContextMenu</a></li><li><a href="module-RouteEditor-RouteEditor.html">RouteEditor</a></li><li><a href="module-RoutePropertiesDialog-RoutePropertiesDialog.html">RoutePropertiesDialog</a></li><li><a href="module-Route-Route.html">Route</a></li><li><a href="module-SaveAsDialog-SaveAsDialog.html">SaveAsDialog</a></li><li><a href="module-SphericalTrigonometry-SphericalTrigonometry.html">SphericalTrigonometry</a></li><li><a href="module-SvgIconFromOsmFactory-SvgIconFromOsmFactory.html">SvgIconFromOsmFactory</a></li><li><a href="module-Translator-Translator.html">Translator</a></li><li><a href="module-TravelEditor-TravelEditor.html">TravelEditor</a></li><li><a href="module-TravelNotesData-TravelNotesData.html">TravelNotesData</a></li><li><a href="module-TravelNotesPaneUI-TravelNotesPaneUI.html">TravelNotesPaneUI</a></li><li><a href="module-TravelNotesToolbarUI-TravelNotesToolbarUI.html">TravelNotesToolbarUI</a></li><li><a href="module-TravelNotesViewer-TravelNotesViewer.html">TravelNotesViewer</a></li><li><a href="module-TravelNotes-TravelNotes.html">TravelNotes</a></li><li><a href="module-TravelUI-TravelUI.html">TravelUI</a></li><li><a href="module-Travel-Travel.html">Travel</a></li><li><a href="module-TwoButtonsDialog-TwoButtonsDialog.html">TwoButtonsDialog</a></li><li><a href="module-UI-UI.html">UI</a></li><li><a href="module-Utilities-Utilities.html">Utilities</a></li><li><a href="module-ViewerFileLoader-ViewerFileLoader.html">ViewerFileLoader</a></li><li><a href="module-ViewerLayersToolbarUI-ViewerLayersToolbarUI.html">ViewerLayersToolbarUI</a></li><li><a href="module-ViewerMapEditor-ViewerMapEditor.html">ViewerMapEditor</a></li><li><a href="module-WaitUI-WaitUI.html">WaitUI</a></li><li><a href="module-WayPointContextMenu-WayPointContextMenu.html">WayPointContextMenu</a></li><li><a href="module-WayPointEditor-WayPointEditor.html">WayPointEditor</a></li><li><a href="module-WayPointPropertiesDialog-WayPointPropertiesDialog.html">WayPointPropertiesDialog</a></li><li><a href="module-WayPoint-WayPoint.html">WayPoint</a></li><li><a href="module-Zoomer-Zoomer.html">Zoomer</a></li></ul><h3>Interfaces</h3><ul><li><a href="PaneUI.html">PaneUI</a></li><li><a href="Provider.html">Provider</a></li></ul><h3>Events</h3><ul><li><a href="module-EventDispatcher.html#~event:additinerarypointmarker">additinerarypointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addrectangle">addrectangle</a></li><li><a href="module-EventDispatcher.html#~event:addsearchpointmarker">addsearchpointmarker</a></li><li><a href="module-EventDispatcher.html#~event:addwaypoint">addwaypoint</a></li><li><a href="module-EventDispatcher.html#~event:geolocationpositionchanged">geolocationpositionchanged</a></li><li><a href="module-EventDispatcher.html#~event:geolocationstatuschanged">geolocationstatuschanged</a></li><li><a href="module-EventDispatcher.html#~event:layerchange">layerchange</a></li><li><a href="module-EventDispatcher.html#~event:noteupdated">noteupdated</a></li><li><a href="module-EventDispatcher.html#~event:profileclosed">profileclosed</a></li><li><a href="module-EventDispatcher.html#~event:providersadded">providersadded</a></li><li><a href="module-EventDispatcher.html#~event:removeallobjects">removeallobjects</a></li><li><a href="module-EventDispatcher.html#~event:removeobject">removeobject</a></li><li><a href="module-EventDispatcher.html#~event:roadbookupdate">roadbookupdate</a></li><li><a href="module-EventDispatcher.html#~event:routepropertiesupdated">routepropertiesupdated</a></li><li><a href="module-EventDispatcher.html#~event:routeupdated">routeupdated</a></li><li><a href="module-EventDispatcher.html#~event:setprovider">setprovider</a></li><li><a href="module-EventDispatcher.html#~event:setrouteslist">setrouteslist</a></li><li><a href="module-EventDispatcher.html#~event:settransitmode">settransitmode</a></li><li><a href="module-EventDispatcher.html#~event:showitinerary">showitinerary</a></li><li><a href="module-EventDispatcher.html#~event:showsearch">showsearch</a></li><li><a href="module-EventDispatcher.html#~event:showtravelnotes">showtravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:travelnameupdated">travelnameupdated</a></li><li><a href="module-EventDispatcher.html#~event:updateitinerary">updateitinerary</a></li><li><a href="module-EventDispatcher.html#~event:updatesearch">updatesearch</a></li><li><a href="module-EventDispatcher.html#~event:updatetravelnotes">updatetravelnotes</a></li><li><a href="module-EventDispatcher.html#~event:zoomto">zoomto</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-InstallationGuideEN.html">InstallationGuideEN</a></li><li><a href="tutorial-UserGuideEN.html">UserGuideEN</a></li><li><a href="tutorial-WhatsNew.html">WhatsNew</a></li><li><a href="tutorial-GuideInstallationFR.html">GuideInstallationFR</a></li><li><a href="tutorial-GuideUtilisateurFR.html">GuideUtilisateurFR</a></li><li><a href="tutorial-QuoiDeNeuf.html">QuoiDeNeuf</a></li><li><a href="tutorial-README.html">README</a></li></ul><h3>Global</h3><ul><li><a href="global.html#newAboutDialog">newAboutDialog</a></li><li><a href="global.html#newAPIKeysDialog">newAPIKeysDialog</a></li><li><a href="global.html#newBaseContextMenu">newBaseContextMenu</a></li><li><a href="global.html#newBaseDialog">newBaseDialog</a></li><li><a href="global.html#newCollection">newCollection</a></li><li><a href="global.html#newColorDialog">newColorDialog</a></li><li><a href="global.html#newDataEncryptor">newDataEncryptor</a></li><li><a href="global.html#newFileCompactor">newFileCompactor</a></li><li><a href="global.html#newFileLoader">newFileLoader</a></li><li><a href="global.html#newFloatWindow">newFloatWindow</a></li><li><a href="global.html#newGeoCoder">newGeoCoder</a></li><li><a href="global.html#newGpxFactory">newGpxFactory</a></li><li><a href="global.html#newItinerary">newItinerary</a></li><li><a href="global.html#newItineraryPoint">newItineraryPoint</a></li><li><a href="global.html#newLayer">newLayer</a></li><li><a href="global.html#newManeuver">newManeuver</a></li><li><a href="global.html#newManeuverContextMenu">newManeuverContextMenu</a></li><li><a href="global.html#newMapContextMenu">newMapContextMenu</a></li><li><a href="global.html#newNote">newNote</a></li><li><a href="global.html#newNoteContextMenu">newNoteContextMenu</a></li><li><a href="global.html#newNoteDialog">newNoteDialog</a></li><li><a href="global.html#newObjId">newObjId</a></li><li><a href="global.html#newObjType">newObjType</a></li><li><a href="global.html#newOsmSearchContextMenu">newOsmSearchContextMenu</a></li><li><a href="global.html#newPasswordDialog">newPasswordDialog</a></li><li><a href="global.html#newPrintFactory">newPrintFactory</a></li><li><a href="global.html#newPrintRouteMapDialog">newPrintRouteMapDialog</a></li><li><a href="global.html#newProfileContextMenu">newProfileContextMenu</a></li><li><a href="global.html#newProfileFactory">newProfileFactory</a></li><li><a href="global.html#newProfileWindow">newProfileWindow</a></li><li><a href="global.html#newRoadbookUpdate">newRoadbookUpdate</a></li><li><a href="global.html#newRoute">newRoute</a></li><li><a href="global.html#newRouteContextMenu">newRouteContextMenu</a></li><li><a href="global.html#newRoutePropertiesDialog">newRoutePropertiesDialog</a></li><li><a href="global.html#newSaveAsDialog">newSaveAsDialog</a></li><li><a href="global.html#newSvgIconFromOsmFactory">newSvgIconFromOsmFactory</a></li><li><a href="global.html#newTravel">newTravel</a></li><li><a href="global.html#newTravelNotesPaneUI">newTravelNotesPaneUI</a></li><li><a href="global.html#newTwoButtonsDialog">newTwoButtonsDialog</a></li><li><a href="global.html#newViewerFileLoader">newViewerFileLoader</a></li><li><a href="global.html#newWaitUI">newWaitUI</a></li><li><a href="global.html#newWayPoint">newWayPoint</a></li><li><a href="global.html#newWayPointContextMenu">newWayPointContextMenu</a></li><li><a href="global.html#newWayPointPropertiesDialog">newWayPointPropertiesDialog</a></li><li><a href="global.html#newZoomer">newZoomer</a></li><li><a href="global.html#theAPIKeysManager">theAPIKeysManager</a></li><li><a href="global.html#theAttributionsUI">theAttributionsUI</a></li><li><a href="global.html#theConfig">theConfig</a></li><li><a href="global.html#theCurrentVersion">theCurrentVersion</a></li><li><a href="global.html#theDataSearchEngine">theDataSearchEngine</a></li><li><a href="global.html#theErrorsUI">theErrorsUI</a></li><li><a href="global.html#theEventDispatcher">theEventDispatcher</a></li><li><a href="global.html#theGeoLocator">theGeoLocator</a></li><li><a href="global.html#theGeometry">theGeometry</a></li><li><a href="global.html#theHTMLElementsFactory">theHTMLElementsFactory</a></li><li><a href="global.html#theHTMLSanitizer">theHTMLSanitizer</a></li><li><a href="global.html#theHTMLViewsFactory">theHTMLViewsFactory</a></li><li><a href="global.html#theIndexedDb">theIndexedDb</a></li><li><a href="global.html#theLayersToolbarUI">theLayersToolbarUI</a></li><li><a href="global.html#theMapEditor">theMapEditor</a></li><li><a href="global.html#theMouseUI">theMouseUI</a></li><li><a href="global.html#theNoteDialogToolbar">theNoteDialogToolbar</a></li><li><a href="global.html#theNoteEditor">theNoteEditor</a></li><li><a href="global.html#theOsmSearchEngine">theOsmSearchEngine</a></li><li><a href="global.html#theOsrmTextInstructions">theOsrmTextInstructions</a></li><li><a href="global.html#thePanesManagerUI">thePanesManagerUI</a></li><li><a href="global.html#thePolylineEncoder">thePolylineEncoder</a></li><li><a href="global.html#theProfileWindowsManager">theProfileWindowsManager</a></li><li><a href="global.html#theProvidersToolbarUI">theProvidersToolbarUI</a></li><li><a href="global.html#theRouteEditor">theRouteEditor</a></li><li><a href="global.html#theSphericalTrigonometry">theSphericalTrigonometry</a></li><li><a href="global.html#theTranslator">theTranslator</a></li><li><a href="global.html#theTravelEditor">theTravelEditor</a></li><li><a href="global.html#theTravelNotes">theTravelNotes</a></li><li><a href="global.html#theTravelNotesData">theTravelNotesData</a></li><li><a href="global.html#theTravelNotesToolbarUI">theTravelNotesToolbarUI</a></li><li><a href="global.html#theTravelNotesViewer">theTravelNotesViewer</a></li><li><a href="global.html#theTravelUI">theTravelUI</a></li><li><a href="global.html#theUI">theUI</a></li><li><a href="global.html#theUtilities">theUtilities</a></li><li><a href="global.html#theViewerLayersToolbarUI">theViewerLayersToolbarUI</a></li><li><a href="global.html#theViewerMapEditor">theViewerMapEditor</a></li><li><a href="global.html#theWayPointEditor">theWayPointEditor</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <!--footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Jan 22 2021 11:40:00 GMT+0100 (GMT+01:00)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Feb 19 2021 20:15:37 GMT+0100 (GMT+01:00)
 </footer-->
 <script> prettyPrint(); </script>
 <script src="scripts/linenumber.js"> </script>
