@@ -137,9 +137,9 @@ D'autres exemples:
 La [branche gh-pages](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages) est la dernière version stable.
 Cette branche contient tous les fichiers nécessaires pour utiliser Travel & Notes, mais ne contient pas les sources.
 
-### branche v2.2.0
+### branche v2.3.0
 
-La [branche v2.2.0](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.2.0) contient les sources de la dernière version stable.
+La [branche v2.3.0](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.3.0) contient les sources de la dernière version stable.
 
 ### branche master
 
