@@ -47,7 +47,7 @@
 <p><a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/?lng=en">Demo - en </a></p>
 <p>If you have a Mapbox, Stadia Maps, GraphHopper or OpenRouteService API key, you can also use this demo with Mapbox, Stadia Maps, GraphHopper and/or OpenRouteService.
 Simply add your API key via the access key management dialog (button 🔑 on the toolbar at the top of the control).</p>
-<p>Also see this <a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==">demo</a>.
+<p>Also see this <a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/viewer/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==">demo</a>.
 which displays a travel with a route and notes, without any edit box or interface, and therefore without the possibility of modifications.
 And the same <a href="https://wwwouaiebe.github.io/samples/Liege/index.html">demo</a> inside a web page</p>
 <p>Other samples:</p>
@@ -60,8 +60,8 @@ And the same <a href="https://wwwouaiebe.github.io/samples/Liege/index.html">dem
 <h3>gh-pages branch</h3>
 <p>The <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages">gh-pages branch</a> is the last stable version.
 This branch contains all the needed files to run Travel &amp; Notes, but not the sources.</p>
-<h3>v2.1.0 branch</h3>
-<p>The <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.1.0">v2.1.0 branch</a> contains the source files of the last stable version.</p>
+<h3>v2.2.0 branch</h3>
+<p>The <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.2.0">v2.2.0 branch</a> contains the source files of the last stable version.</p>
 <h3>master branch</h3>
 <p>The <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/master">master branch</a> is the development branch and is unstable.</p>
 <h2>Warning before installing and using version 2.0.0 or greater</h2>
@@ -70,18 +70,16 @@ longer fully compatible with this version and some data in the notes may be lost
 <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/en/UserGuideEN.md#OpenFileWithV200">user guide - en</a>
 how to convert files made with an earlier version.</p>
 <h2>What's new in the last release</h2>
+<p>Following bugs are corrected:</p>
 <ul>
-<li>the TravelNotesConfig.json file has been completely revised. If you are using a modified version of this file, it is important to review this one. See the installation guide.</li>
-<li>a status indicator for the last use of the &quot;Save to file&quot; command has been added (green: travel saved - yellow: travel modified since the last save - red: travel modified and not saved for at least 5 minutes).</li>
-<li>the method used to find the municipality of an address has been revised.</li>
-<li>the search for points of interest in OpenStreetMap has been improved and is much faster.</li>
-<li>a &quot;Partial save&quot; command has been added. This allows you to save a travel WITHOUT the travel notes and / or WITHOUT the route notes and / or WITHOUT the maneuvers. This command allows to have a much lighter file
-for map presentations on the Internet</li>
-<li>the css have been reorganized and revised. Many small presentation bugs related to CSS have been fixed.</li>
-<li>it is possible to zoom and pan on the map when a dialog is displayed.</li>
-<li>it is possible to use the keyboard for the viewer commands. See the
-<a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/en/UserGuideEN.md#Viewer">user guide - en </a></li>
-<li>and many purely technical modifications as well as the correction of many small bugs.</li>
+<li>Issue #158: when creating a route note from an Osm search result, the distance from the beginning of route is 0</li>
+<li>Issue #159: When creating a note from an Osm search result, it's needed to verify the address before adding the note or showing the dialog</li>
+<li>Issue #160: noopener noreferrer are added automaticaly when a link is created with target='_blank'</li>
+<li>Issue #162: Zoom on the map is not working when a dialog is displayed.</li>
+<li>Issue #163: svg icons integrated in js files are not displayed correctly ( Chrome ).</li>
+<li>Issue #164: PolylineProvider and PublicTransportProvider crash when selected from the provider toolbar</li>
+<li>Issue #168: RCN REF numbers are difficult to read in the notes icons. Change the color.</li>
+<li>Issue #170: The apps crash when renaming a waypoint and then saving the route before the end of the renaming operation..</li>
 </ul>
 <p>For other versions, see the document <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/en/WhatsNew.md">'What's new?' - en </a></p>
 <a id="fr" />
@@ -106,7 +104,7 @@ for map presentations on the Internet</li>
 <p><a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/?">Demo - fr </a></p>
 <p>Si vous disposez d'une API key pour Mapbox, Stadia Maps, GraphHopper ou OpenRouteService, vous pouvez également utiliser cette démo avec Mapbox, Stadia Maps, GraphHopper et / ou OpenRouteService.
 Ajoutez simplement votre API key via la boite de dialogue de gestion des clefs d'accès ( bouton 🔑 sur la barre d'outils en haut du contrôle ).</p>
-<p>Voyez aussi cette <a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==">démo</a>
+<p>Voyez aussi cette <a href="https://wwwouaiebe.github.io/leaflet.TravelNotes/viewer/?fil=aHR0cHM6Ly93d3dvdWFpZWJlLmdpdGh1Yi5pby9zYW1wbGVzL0xpZWdlL1N0YXRpb25Ub1lvdXRoSG9zdGVsLnRydg==">démo</a>
 qui affiche un voyage avec un trajet et des notes, sans aucune boite d'édition ou interface, et donc sans possibilité de modifications.</p>
 <p>Et la même <a href="https://wwwouaiebe.github.io/samples/Liege/index.html">démo</a> intégrée dans une page web</p>
 <p>D'autres exemples:</p>
@@ -119,8 +117,8 @@ qui affiche un voyage avec un trajet et des notes, sans aucune boite d'édition 
 <h3>branche gh-pages</h3>
 <p>La <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages">branche gh-pages</a> est la dernière version stable.
 Cette branche contient tous les fichiers nécessaires pour utiliser Travel &amp; Notes, mais ne contient pas les sources.</p>
-<h3>branche v2.1.0</h3>
-<p>La <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.0.0">branche v2.1.0</a> contient les sources de la dernière version stable.</p>
+<h3>branche v2.2.0</h3>
+<p>La <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.2.0">branche v2.2.0</a> contient les sources de la dernière version stable.</p>
 <h3>branche master</h3>
 <p>La <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/master">branche master</a> est la branche de développement et est instable.</p>
 <h2>Avertissement avant d'installer et utiliser la version 2.0.0 ou une version supérieure à 2.0.0</h2>
@@ -128,20 +126,16 @@ Cette branche contient tous les fichiers nécessaires pour utiliser Travel &amp;
 et quelques données présentes dans les notes peuvent être perdues. Voyez dans le <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/fr/GuideUtilisateurFR.md#OpenFileWithV200">guide pour les utilisateurs - fr</a>
 comment convertir des fichiers réalisés avec une version antérieure.</p>
 <h2>Quoi de neuf dans la dernière version</h2>
+<p>Les bugs suivants sont corrigés:</p>
 <ul>
-<li>le fichier TravelNotesConfig.json a été entièrement revu. Si vous utilisez une version modifiée de ce fichier, il est important
-de revoir celle-ci. Voyez le guide d'installation.</li>
-<li>un indicateur du statut de la dernière utilisation de la commande &quot;Sauver dans un fichier&quot; a été ajoutée (vert : voyage sauvé - jaune :
-voyage modifié depuis la dernière sauvegarde - rouge : voyage modifié et non sauvé depuis au mins 5 minutes).</li>
-<li>la méthode utilisée pour rechercher la commune d'une adresse a été revue.</li>
-<li>la recherche de points d'intérêts dans OpenStreetMap a été améliorée et est beaucoup plus rapide.</li>
-<li>une commande &quot;Sauvegarde partielle&quot; a été ajoutée. Celle-ci permet de sauver un voyage SANS les notes de voyage et/ou SANS les notes de
-trajet et/ou SANS les manoeuvres. Cette commande permet d'avoir un fichier beaucoup plus léger pour des présentations de carte sur Internet</li>
-<li>les css ont été réorganisés et revus. De nombreux petits bugs de présentation liés à CSS ont été corrigés.</li>
-<li>il est possible de faire des zooms et des pans sur la carte quand un dialogue est affiché.</li>
-<li>il est possible d'utiliser le clavier pour les commandes du viewer. Voir
-le <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/fr/GuideUtilisateurFR.md#Viewer">guide pour les utilisateurs - fr </a></li>
-<li>et de nombreuses modifications purement techniques ainsi qie la correction de nombreux petits bugs.</li>
+<li>Issue #158: la distance entre une note de trajet et le début du trajet est 0 quand cette note est créée depuis un résultat de recherche dans OpenStreetMap.</li>
+<li>Issue #159: l'adresse doit être vérifiée quand une note est créée depuis un résultat de recherche dans OpenStreetMap.</li>
+<li>Issue #160: noopener noreferrer sont ajoutés automatiquement quand un lien est créé avec target='_blank'</li>
+<li>Issue #162: le zoom ne fonctionne pas quand un dialogue est affiché ( Firefox ).</li>
+<li>Issue #163: les icônes en svg intégrées dans les fichiers JS ne sont pas affichées correctement ( Chrome ).</li>
+<li>Issue #164: polylineProvider et PublicTransportProvider crash quand les providers sont sélectionnés</li>
+<li>Issue #168: La couleur des références RCN-REF est modifiée dans les icônes.</li>
+<li>Issue #170: un crash survient lorsque un trajet édité est sauvé avant qu'un point de passage soit entièrement renommé.</li>
 </ul>
 <p>Pour les autres versions, reportez-vous au document <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/TravelNotesGuides/fr/QuoiDeNeuf.md">'quoi de neuf?' - fr </a></p>
 </article>
@@ -157,7 +151,7 @@ le <a href="https://github.com/wwwouaiebe/leaflet.TravelNotes/blob/gh-pages/Trav
 <br class="clear">
 
 <!--footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.5</a> on Fri Feb 19 2021 20:15:38 GMT+0100 (GMT+01:00)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Jul 08 2021 14:37:10 GMT+0200 (GMT+02:00)
 </footer-->
 <script> prettyPrint(); </script>
 <script src="scripts/linenumber.js"> </script>
