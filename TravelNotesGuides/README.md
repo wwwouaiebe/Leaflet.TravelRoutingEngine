@@ -53,9 +53,9 @@ Other samples:
 The [gh-pages branch](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/gh-pages) is the last stable version. 
 This branch contains all the needed files to run Travel & Notes, but not the sources.
   
-### v2.2.0 branch
+### v2.3.0 branch
 
-The [v2.2.0 branch](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.2.0) contains the source files of the last stable version.
+The [v2.3.0 branch](https://github.com/wwwouaiebe/leaflet.TravelNotes/tree/v2.3.0) contains the source files of the last stable version.
 
 ### master branch
 
